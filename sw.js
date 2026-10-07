@@ -1,7 +1,7 @@
 /* Keeps the CEU data tool on the phone so it opens without internet after the first visit.
    Opening with internet fetches the newest version; without internet the kept copy is used.
    Change VERSION when the tool changes. */
-var VERSION = 'ceu-data-2';
+var VERSION = 'ceu-data-3';
 var FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', function (e) {

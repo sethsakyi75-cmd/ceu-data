@@ -75,6 +75,8 @@ input.w,select.w{border-color:#d29c00;background:var(--warnbg)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
 svg{max-width:100%;height:auto;display:block}
 .flag{color:var(--warn);font-size:.85rem}
+.aggs{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;margin:4px 0 8px}
+.aggs input{width:100%;text-align:center;padding:9px 4px}
 .prog{background:#e3e8f2;border-radius:8px;height:14px;overflow:hidden;margin:6px 0 10px}
 .prog i{display:block;height:100%;background:var(--ok)}
 .big-n{font-size:1.25rem}
@@ -141,6 +143,9 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   'use strict';
   /* ---------- what is collected ---------- */
   var CLS = [['KG1', 'KG 1', 'KG'], ['KG2', 'KG 2', 'KG'], ['B1', 'Basic 1', 'P'], ['B2', 'Basic 2', 'P'], ['B3', 'Basic 3', 'P'], ['B4', 'Basic 4', 'P'], ['B5', 'Basic 5', 'P'], ['B6', 'Basic 6', 'P'], ['J1', 'JHS 1', 'J'], ['J2', 'JHS 2', 'J'], ['J3', 'JHS 3', 'J']];
+  var REGIONS = ['Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern', 'Greater Accra', 'North East', 'Northern', 'Oti', 'Savannah', 'Upper East', 'Upper West', 'Volta', 'Western', 'Western North'];
+  function regionOf(v) { var k = String(v || '').toLowerCase().replace(/region/g, '').replace(/[^a-z]/g, ''); for (var i = 0; i < REGIONS.length; i++) if (REGIONS[i].toLowerCase().replace(/[^a-z]/g, '') === k) return REGIONS[i]; return ''; }
+  function regionSel(id, val) { return '<select id="' + id + '"><option value="">Choose the region…</option>' + REGIONS.map(function (r) { return '<option' + (r === val ? ' selected' : '') + '>' + r + '</option>'; }).join('') + '</select>'; }
   var LEVELS = [['KG', 'Kindergarten', 'lvKG'], ['P', 'Primary', 'lvP'], ['J', 'JHS', 'lvJ']];
   var SUBJ = [['ENG', 'English'], ['MATH', 'Mathematics'], ['SCI', 'Science'], ['SOC', 'Social Studies'], ['RME', 'Religious & Moral Ed.'], ['COMP', 'Computing'], ['CT', 'Career Technology'], ['CAD', 'Creative Arts & Design'], ['GHL', 'Ghanaian Language'], ['FRE', 'French']];
   var BANDS = ['6–10', '11–15', '16–20', '21–25', '26–30', '31–36', '37–54'];
@@ -154,24 +159,24 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   var XB = ['x_b1', 'x_b2', 'x_b3', 'x_b4', 'x_b5', 'x_b6', 'x_b7'];
 
   var LABEL = {
-    collection: 'Collection name', name: 'School name', emis: 'EMIS code', district: 'District', location: 'Location', circuit: 'Circuit', parish: 'Parish',
+    collection: 'Collection name', name: 'School name', emis: 'EMIS code', region: 'Region', district: 'District', location: 'Location', circuit: 'Circuit', parish: 'Parish',
     head: 'Head teacher', phone: 'Phone', filledBy: 'Filled in by', lvKG: 'Has KG', lvP: 'Has Primary', lvJ: 'Has JHS',
     adm_b: 'New admissions boys', adm_g: 'New admissions girls', drop_b: 'Dropouts boys', drop_g: 'Dropouts girls',
     sen_b: 'Special needs boys', sen_g: 'Special needs girls',
     t_m: 'Teachers male', t_f: 'Teachers female', tr_m: 'Trained teachers male', tr_f: 'Trained teachers female',
     q_deg: 'Teachers with a degree', q_dip: 'Teachers with a diploma', q_cert: 'Teachers with Cert A', q_oth: 'Teachers with other/no teaching qualification',
     nt_m: 'Non-teaching staff male', nt_f: 'Non-teaching staff female', vac: 'Teacher vacancies',
-    x_name: 'Exam name', x_reg: 'Candidates registered', x_sat: 'Candidates who sat', x_mean: 'Mean aggregate',
+    x_name: 'Exam name', x_reg: 'Candidates registered', x_aggs: 'Aggregate of each candidate', x_sat: 'Candidates who sat', x_mean: 'Mean aggregate',
     f_cls: 'Classrooms', f_clsg: 'Classrooms in good condition', f_seat: 'Seats for pupils', f_toi: 'Toilets', f_toiw: 'Toilets working',
     f_comp: 'Computers', f_compw: 'Computers working', f_book: 'Core textbooks', f_water: 'Safe drinking water', f_elec: 'Electricity', f_lib: 'Library'
   };
   CLS.forEach(function (c) { LABEL['e_' + c[0] + '_b'] = c[1] + ' boys'; LABEL['e_' + c[0] + '_g'] = c[1] + ' girls'; });
   XB.forEach(function (k, i) { LABEL[k] = 'Aggregate ' + BANDS[i]; });
   SUBJ.forEach(function (s) { LABEL['c_' + s[0]] = s[1] + ' (grades 1–6)'; });
-  var TEXTK = ['collection', 'name', 'emis', 'district', 'location', 'circuit', 'parish', 'head', 'phone', 'filledBy'];
+  var TEXTK = ['collection', 'name', 'emis', 'region', 'district', 'location', 'circuit', 'parish', 'head', 'phone', 'filledBy'];
   var ALLKEYS = TEXTK.concat(['lvKG', 'lvP', 'lvJ']);
   CLS.forEach(function (c) { ALLKEYS.push('e_' + c[0] + '_b', 'e_' + c[0] + '_g'); });
-  ALLKEYS = ALLKEYS.concat(OTHER, STAFF, ['x_name', 'x_reg', 'x_sat'], XB, ['x_mean'], SUBJ.map(function (s) { return 'c_' + s[0]; }), FACN, FACY);
+  ALLKEYS = ALLKEYS.concat(OTHER, STAFF, ['x_name', 'x_reg', 'x_aggs', 'x_sat'], XB, ['x_mean'], SUBJ.map(function (s) { return 'c_' + s[0]; }), FACN, FACY);
 
   /* ---------- small helpers ---------- */
   var MEM = {};
@@ -191,7 +196,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function pct(a, b) { return b > 0 ? fmt(100 * a / b, 1) + '%' : '–'; }
   function ratio(a, b, dp) { return b > 0 ? fmt(a / b, dp == null ? 1 : dp) : '–'; }
   function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
-  function names(ks) { return ks.map(function (k) { return LABEL[k] || k; }).join(', '); }
+  function names(ks) { return ks.map(function (k) { return /^agg_\d+$/.test(k) ? 'candidate ' + (+k.slice(4) + 1) : LABEL[k] || k; }).join(', '); }
   function rid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function fnv(s) { var x = 0x811c9dc5; for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = (x + ((x << 1) + (x << 4) + (x << 7) + (x << 8) + (x << 24))) >>> 0; } return ('0000000' + x.toString(16)).slice(-8); }
   function stable(d) { return JSON.stringify(Object.keys(d).sort().map(function (k) { return [k, d[k]]; })); }
@@ -273,7 +278,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       }
     } else if (view === 'register') {
       s += '<h2>Register your school</h2><p class="note">Use the head teacher\'s phone number. The Unit office checks the school name and phone number against its list.</p><div class="two">' +
-        fld('rgName', 'School name', 'text', ' placeholder="e.g. St. Mary R/C Basic"') + fld('rgDist', 'District') + fld('rgLoc', 'Location (town or village)') + fld('rgEmis', 'EMIS code (if known)') +
+        fld('rgName', 'School name', 'text', ' placeholder="e.g. St. Mary R/C Basic"') + '<label class="f">Region' + regionSel('rgReg') + '</label>' + fld('rgDist', 'District') + fld('rgLoc', 'Location (town or village)') + fld('rgEmis', 'EMIS code (if known)') +
         fld('rgHead', 'Head teacher') + fld('rgPhone', 'Head teacher\'s phone', 'tel', ' placeholder="e.g. 0244123456"') + '</div><button class="btn big" id="rgBtn">Register</button><button class="btn alt" id="gtBack">Back</button>';
     } else if (view === 'get') {
       s += '<h2>Get a PIN</h2><p class="note">Type the school name and the phone number you registered with. After your first log in, you also need your recovery password.</p>' +
@@ -281,6 +286,8 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
         '<button class="btn big" id="gpBtn">Get my PIN</button><button class="btn alt" id="gtBack">Back</button><p class="note">Forgot the recovery password? Call or visit the Catholic Education Unit office: they can tell you.</p>';
     } else if (view === 'setpin') {
       s += '<h2>Choose your own PIN</h2><p class="note">' + h(session.school.name) + '. Choose a PIN of 4 to 8 numbers that only you know.</p>' + fld('spPin1', 'New PIN', 'password', NUM) + fld('spPin2', 'Type it again', 'password', NUM) + '<button class="btn big" id="spBtn">Save my PIN</button>';
+    } else if (view === 'setregion') {
+      s += '<h2>Choose your region</h2><p class="note">' + h(session.school.name) + '. The Unit office now asks every school for its region. You do this once.</p><label class="f">Region' + regionSel('srReg') + '</label><button class="btn big" id="srBtn">Save</button>';
     } else if (view === 'setpw') {
       s += '<h2>Set your recovery password</h2><div class="msg warn"><b>Keep this password safe.</b> Write it down and keep it where you will find it. You need it to get a new PIN if you forget yours. If you forget this password too, call or visit the Unit office.</div>' +
         fld('pwA', 'Recovery password: exactly 8 numbers', 'password', NUM) + fld('pwB', 'Type it again', 'password', NUM) + '<button class="btn big" id="pwBtn">Save the password</button>';
@@ -296,10 +303,12 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     bind('gtGet', function () { renderGate('get'); });
     bind('gtLogin', login); bind('rgBtn', register); bind('gpBtn', getPin); bind('spBtn', setPin); bind('pwBtn', setPw); bind('cpBtn', changePin);
     bind('cpBack', function () { go('school'); });
+    bind('srBtn', setRegion);
   }
   function register() {
-    var r = { id: rid(), name: clip(val('rgName')), district: clip(val('rgDist')), location: clip(val('rgLoc')), emis: clip(val('rgEmis')), head: clip(val('rgHead')), phone: ghPhone(val('rgPhone')), at: new Date().toISOString(), salt: rid() };
+    var r = { id: rid(), name: clip(val('rgName')), region: regionOf(val('rgReg')), district: clip(val('rgDist')), location: clip(val('rgLoc')), emis: clip(val('rgEmis')), head: clip(val('rgHead')), phone: ghPhone(val('rgPhone')), at: new Date().toISOString(), salt: rid() };
     if (!r.name || !r.district) return gmsg('Type the school name and the district.');
+    if (!r.region) return gmsg('Choose the region.');
     if (!phoneOk(r.phone)) return gmsg('Type the head teacher\'s phone: 10 numbers, like 0244123456.');
     if (findReg(r.name, r.phone)) return gmsg('This school is already registered on this phone. Log in, or tap Get a PIN.');
     saveReg(r);
@@ -324,9 +333,20 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if (!r.pinHash) return gmsg('This school has no PIN yet. Tap Get a PIN.');
     if (pwHash(r.salt, 'pin:' + val('gtPin')) !== r.pinHash) { wrong(); return gmsg('Wrong PIN. Forgot it? Tap Get a PIN.'); }
     tries.n = 0; session.school = r;
-    if (r.pinTemp) return renderGate('setpin');
-    if (!r.pwHash) return renderGate('setpw');
+    nextStep();
+  }
+  /* after logging in: what is still missing for this school, in this order */
+  function nextStep(msg) {
+    var r = session.school;
+    if (!r.region) return renderGate('setregion', msg);
+    if (r.pinTemp) return renderGate('setpin', msg);
+    if (!r.pwHash) return renderGate('setpw', msg);
     go('school');
+  }
+  function setRegion() {
+    var r = session.school, g = regionOf(val('srReg'));
+    if (!g) return gmsg('Choose the region.');
+    r.region = g; saveReg(r); nextStep();
   }
   function newPinOk(a, b) {
     if (!/^\d{4,8}$/.test(a)) { gmsg('The PIN must be 4 to 8 numbers.'); return false; }
@@ -337,14 +357,14 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var r = session.school, a = val('spPin1');
     if (!newPinOk(a, val('spPin2'))) return;
     r.pinHash = pwHash(r.salt, 'pin:' + a); r.pinTemp = false; saveReg(r);
-    if (!r.pwHash) renderGate('setpw', ['Your PIN is saved ✔', 'ok']); else go('school');
+    nextStep(['Your PIN is saved ✔', 'ok']);
   }
   function setPw() {
     var r = session.school, a = val('pwA');
     if (!/^\d{8}$/.test(a)) return gmsg('The recovery password must be exactly 8 numbers.');
     if (a !== val('pwB')) return gmsg('The two passwords are not the same.');
     r.pwHash = pwHash(r.salt, 'rp:' + a); r.rpw = scramble(a); saveReg(r);
-    go('school');
+    nextStep();
   }
   function changePin() {
     var r = session.school;
@@ -404,9 +424,18 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     return t;
   }
   function examFilled(d) {
-    for (var k in d) if (/^(x_|c_)/.test(k) && d[k] !== '' && d[k] != null) return true;
+    for (var k in d) if (/^(x_|c_)/.test(k) && d[k] !== '' && d[k] != null && !(d[k] instanceof Array && !d[k].length)) return true;
     return false;
   }
+  /* from the aggregate of each candidate: how many sat, the groups and the mean */
+  function examFrom(aggs) {
+    var e = { sat: aggs.length, bands: [0, 0, 0, 0, 0, 0, 0], sum: 0, pass: 0 }, LIM = [10, 15, 20, 25, 30, 36, 54];
+    aggs.forEach(function (a) { e.sum += a; for (var i = 0; i < 7; i++) if (a <= LIM[i]) { e.bands[i]++; break; } });
+    for (var i = 0; i < PASS_BANDS; i++) e.pass += e.bands[i];
+    e.mean = e.sat ? Math.round(e.sum / e.sat * 100) / 100 : null;
+    return e;
+  }
+  function aggOk(a) { return typeof a === 'number' && Math.floor(a) === a && a >= 6 && a <= 54; }
   function validate(d) {
     var E = [], W = [];
     function err(m, ks) { E.push({ m: m, k: ks || [] }); }
@@ -434,7 +463,15 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if (n(d, 'f_clsg') > n(d, 'f_cls')) err('Classrooms in good condition are more than all classrooms.', ['f_clsg']);
     if (n(d, 'f_toiw') > n(d, 'f_toi')) err('Working toilets are more than all toilets.', ['f_toiw']);
     if (n(d, 'f_compw') > n(d, 'f_comp')) err('Working computers are more than all computers.', ['f_compw']);
-    if (lv.J && examFilled(d)) {
+    if (lv.J && examFilled(d) && d.x_aggs instanceof Array) {
+      if (!d.x_name) err('Type the exam name, e.g. BECE 2026 or Mock 2.', ['x_name']);
+      if (!has(d, 'x_reg')) err('Type the number of candidates registered.', ['x_reg']);
+      if (!d.x_aggs.length) err('Type the aggregate of each candidate who sat.', ['agg_0']);
+      var badA = []; d.x_aggs.forEach(function (a, i) { if (!aggOk(a)) badA.push(i); });
+      if (badA.length) err('An aggregate must be a whole number from 6 to 54. Check ' + badA.slice(0, 5).map(function (i) { return 'candidate ' + (i + 1) + ' (' + d.x_aggs[i] + ')'; }).join(', ') + (badA.length > 5 ? ' …' : '') + '.', badA.map(function (i) { return 'agg_' + i; }));
+      if (has(d, 'x_reg') && d.x_aggs.length > d.x_reg) err(d.x_aggs.length + ' aggregates typed, but only ' + d.x_reg + ' candidates were registered.', ['x_reg']);
+      SUBJ.forEach(function (s) { if (n(d, 'c_' + s[0]) > d.x_aggs.length) err(s[1] + ': more candidates with grades 1–6 than candidates who sat.', ['c_' + s[0]]); });
+    } else if (lv.J && examFilled(d)) {     /* forms made before the aggregate of each candidate was asked */
       if (!d.x_name) err('Type the exam name, e.g. BECE 2026 or Mock 2.', ['x_name']);
       var xm = ['x_reg', 'x_sat'].concat(XB).filter(function (k) { return !has(d, k); });
       if (xm.length) err('Fill every exam box (type 0 where none): ' + names(xm) + '.', xm);
@@ -472,6 +509,11 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     for (k in raw) d[k] = raw[k];
     CLS.forEach(function (c) { if (!d['lv' + c[2]]) { delete d['e_' + c[0] + '_b']; delete d['e_' + c[0] + '_g']; } });
     if (!d.lvJ || !examFilled(d)) for (k in d) if (/^(x_|c_)/.test(k)) delete d[k];
+    if (d.x_aggs instanceof Array) {
+      var e = examFrom(d.x_aggs);
+      d.x_sat = e.sat; XB.forEach(function (k, i) { d[k] = e.bands[i]; });
+      if (e.mean == null) delete d.x_mean; else d.x_mean = e.mean;
+    }
     return d;
   }
 
@@ -484,7 +526,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function buildForm() {
     var s = '';
     s += '<div class="card"><h2>Collection</h2><p class="note">The Unit office tells you this name, for example <b>2026/27 Term 1 census</b>. Type it exactly.</p>' + txt('collection', 'e.g. 2026/27 Term 1 census') + '</div>';
-    s += '<div class="card"><h2>1. The school</h2><div class="two">' + txt('name', 'e.g. St. Mary R/C Basic School') + txt('emis', 'If you know it') + txt('district') + txt('circuit') + txt('parish') + txt('head') + txt('phone', '', 'tel') + txt('filledBy', 'Name and position') + '</div>';
+    s += '<div class="card"><h2>1. The school</h2><div class="two">' + txt('name', 'e.g. St. Mary R/C Basic School') + txt('emis', 'If you know it') + txt('region') + txt('district') + txt('circuit') + txt('parish') + txt('head') + txt('phone', '', 'tel') + txt('filledBy', 'Name and position') + '</div>';
     s += '<div class="note" style="margin:0 0 4px">Levels the school has:</div><div class="checks">';
     LEVELS.forEach(function (l) { s += '<label><input type="checkbox" data-k="' + l[2] + '"> ' + l[1] + '</label>'; });
     s += '</div></div>';
@@ -505,11 +547,9 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     s += '<table class="grid">' + numRow('vac', 'Teachers still needed (vacancies)') + '</table></div>';
     s += '<div class="card" id="examCard"><h2>4. Exam results (JHS)</h2><p class="note">Results of the last BECE or a mock. Leave this part empty if there are no results to send.</p>';
     s += txt('x_name', 'e.g. BECE 2026 or Mock 2');
-    s += '<table class="grid">' + numRow('x_reg') + numRow('x_sat') + '</table>';
-    s += '<h3>Candidates by aggregate</h3><table class="grid"><tr><th>Aggregate</th><th class="r">Candidates</th></tr>';
-    XB.forEach(function (k, i) { s += '<tr><td>' + BANDS[i] +  + '</td><td style="width:110px">' + numIn(k) + '</td></tr>'; });
-    s += '</table><p class="live" id="bandLive"></p>';
-    s += '<table class="grid"><tr><td>Mean (average) aggregate, if you know it</td><td style="width:110px">' + numIn('x_mean', true) + '</td></tr></table>';
+    s += '<table class="grid">' + numRow('x_reg') + '</table>';
+    s += '<h3>Aggregate of each candidate who sat</h3><p class="note">Type each candidate\'s aggregate (6 to 54), one box each. A new box appears as you type. The number who sat, the groups, the pass rate and the mean aggregate are worked out for you.</p>';
+    s += '<div class="aggs" id="aggBox"></div><div id="aggStats"></div>';
     s += '<h3>Candidates with grades 1–6 in each subject</h3><p class="note">Leave a subject empty if the school did not take it.</p><table class="grid">';
     SUBJ.forEach(function (x) { s += numRow('c_' + x[0], x[1]); });
     s += '</table></div>';
@@ -519,21 +559,32 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     $('schoolForm').innerHTML = s;
   }
   function collect() {
-    var d = {}, els = $('schoolForm').querySelectorAll('[data-k]');
+    var d = {}, els = $('schoolForm').querySelectorAll('[data-k]'), aggs = [];
     for (var i = 0; i < els.length; i++) {
       var el = els[i], k = el.getAttribute('data-k');
-      if (el.type === 'checkbox') { if (el.checked) d[k] = true; }
+      if (/^agg_/.test(k)) { if (el.value !== '') aggs.push(Number(el.value)); }
+      else if (el.type === 'checkbox') { if (el.checked) d[k] = true; }
       else if (el.type === 'number') { if (el.value !== '') { var v = Number(el.value); if (isFinite(v)) d[k] = v; } }
       else { var t = String(el.value || '').replace(/\s+/g, ' ').trim(); if (t) d[k] = t; }
     }
+    if (aggs.length) d.x_aggs = aggs;
     return d;
+  }
+  function aggInput(i, v) { return '<input data-k="agg_' + i + '" type="number" inputmode="numeric" min="6" max="54" step="1" placeholder="' + (i + 1) + '" aria-label="Candidate ' + (i + 1) + '"' + (v == null ? '' : ' value="' + h(v) + '"') + '>'; }
+  function renderAggs(list) { $('aggBox').innerHTML = (list || []).map(function (v, i) { return aggInput(i, v); }).join('') + aggInput((list || []).length); }
+  /* always one empty box at the end */
+  function growAggs() {
+    var box = $('aggBox'), ins = box.querySelectorAll('input');
+    if (!ins.length || ins[ins.length - 1].value !== '') box.insertAdjacentHTML('beforeend', aggInput(ins.length));
   }
   function fill(d) {
     var els = $('schoolForm').querySelectorAll('[data-k]');
     for (var i = 0; i < els.length; i++) {
       var el = els[i], k = el.getAttribute('data-k');
+      if (/^agg_/.test(k)) continue;
       if (el.type === 'checkbox') el.checked = !!d[k]; else el.value = d[k] == null ? '' : d[k];
     }
+    renderAggs(d.x_aggs instanceof Array ? d.x_aggs : []);
   }
   function live() {
     var d = collect(), t = totals(d), anyLv = false;
@@ -547,9 +598,11 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var ql = $('qualLive');
     ql.textContent = 'These add up to ' + t.qual + ' of ' + t.teach + ' teachers.' + (t.qual === t.teach ? ' ✔' : '');
     ql.className = 'live ' + (t.qual === t.teach ? 'ok' : 'bad');
-    var bl = $('bandLive'), sat = n(d, 'x_sat');
-    bl.textContent = 'These add up to ' + t.bands + ' of ' + sat + ' who sat.' + (t.bands === sat ? ' ✔' : '');
-    bl.className = 'live ' + (t.bands === sat ? 'ok' : 'bad');
+    growAggs();
+    var aggs = (d.x_aggs || []).filter(aggOk), e = examFrom(aggs), st = $('aggStats');
+    st.innerHTML = !aggs.length ? '' : '<p class="live ok" id="aggLive"><b>' + e.sat + '</b> candidates sat' + (has(d, 'x_reg') ? ' (of ' + d.x_reg + ' registered)' : '') + ' · pass rate (aggregate 6–30): <b>' + pct(e.pass, e.sat) + '</b> · mean aggregate: <b>' + fmt(e.mean, 2) + '</b></p>' +
+      '<table class="grid"><tr><th>Aggregate</th>' + BANDS.map(function (b) { return '<th class="r">' + b + '</th>'; }).join('') + '</tr><tr><td>Candidates</td>' + e.bands.map(function (v) { return '<td class="r">' + v + '</td>'; }).join('') + '</tr></table>' +
+      ((d.x_aggs || []).length > aggs.length ? '<p class="live bad">Some boxes are not between 6 and 54.</p>' : '');
     return d;
   }
   function saveDraft() {
@@ -565,7 +618,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function finish(force) {
     var raw = collect(), d = clean(raw), box = $('chk');
     var sc = session.school;
-    d.name = sc.name; d.district = sc.district; d.phone = sc.phone; d.regId = sc.id;
+    d.name = sc.name; d.district = sc.district; d.phone = sc.phone; d.regId = sc.id; d.region = sc.region;
     if (sc.emis) d.emis = sc.emis; else delete d.emis;
     if (sc.location) d.location = sc.location;
     if (sc.rpw) d.rpw = sc.rpw;
@@ -651,7 +704,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     rows.push([['Total pupils', 1], [t.p]]); rows.push([['Total teachers', 1], [t.teach]]);
     rows.push([]);
     rows.push([['Item', 1], ['Value', 1], ['Code', 1]]);
-    ALLKEYS.forEach(function (k) { if (d[k] === undefined) return; rows.push([[LABEL[k] || k], [d[k] === true ? 'Yes' : d[k]], [k]]); });
+    ALLKEYS.forEach(function (k) { if (d[k] === undefined) return; rows.push([[LABEL[k] || k], [cellVal(d[k])], [k]]); });
     rows.push([]);
     rows.push([['Made with the CEU school data tool. Do not change this file: the Unit office will refuse a changed file.']]);
     var sd = rows.map(function (r, ri) {
@@ -676,6 +729,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       { name: 'xl/worksheets/sheet2.xml', text: head + '<worksheet xmlns="' + NS + '"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>' + xesc(JSON.stringify(rec)) + '</t></is></c></row></sheetData></worksheet>' }
     ]);
   }
+  function cellVal(v) { return v === true ? 'Yes' : v instanceof Array ? v.join(', ') : v; }
   function xlName(rec) { return 'CEU_' + fileSafe(rec.d.collection) + '_' + fileSafe(rec.d.name) + '.xlsx'; }
   /* gives back the school's form, or null if it is not one; a form whose visible numbers were changed comes back marked */
   function readXlsx(buf, done) {
@@ -715,7 +769,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
         for (var ref in vis) {
           var m = /^C(\d+)$/.exec(ref);
           if (!m || !LABEL[vis[ref]]) continue;
-          var k = vis[ref], shown = vis['B' + m[1]], want = rec.d[k] === true ? 'Yes' : rec.d[k];
+          var k = vis[ref], shown = vis['B' + m[1]], want = cellVal(rec.d[k]);
           seen[k] = 1;
           if (typeof want === 'number' ? Math.abs(Number(shown) - want) > 1e-9 || shown === '' || shown == null : String(shown == null ? '' : shown) !== String(want == null ? '' : want)) same = false;
         }
@@ -774,7 +828,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   }
   /* the registered school's details are filled in and cannot be changed in the form */
   function fixSchool() {
-    var sc = session.school, fix = { name: sc.name, district: sc.district, emis: sc.emis, phone: sc.phone };
+    var sc = session.school, fix = { name: sc.name, region: sc.region, district: sc.district, emis: sc.emis, phone: sc.phone };
     var all = $('schoolForm').querySelectorAll('[data-k]');
     for (var i = 0; i < all.length; i++) if (all[i].readOnly) { all[i].readOnly = false; all[i].style.background = ''; }
     for (var k in fix) { var el = $('schoolForm').querySelector('[data-k="' + k + '"]'); if (el) { el.value = fix[k] || ''; if (fix[k]) { el.readOnly = true; el.style.background = '#eef1f7'; } } }
@@ -927,7 +981,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     all.forEach(function (o) { seen[ourKey(o)] = 1; });
     list.forEach(function (o) {
       if (!o || !clip(o.name)) return;
-      o = { id: o.id || rid(), name: clip(o.name), district: clip(o.district), location: clip(o.location), emis: clip(o.emis), phone: phoneOk(o.phone) ? ghPhone(o.phone) : clip(o.phone), alias: o.alias || [], rpw: o.rpw || '', rpwAt: o.rpwAt || '' };
+      o = { id: o.id || rid(), name: clip(o.name), region: regionOf(o.region) || clip(o.region), district: clip(o.district), location: clip(o.location), emis: clip(o.emis), phone: phoneOk(o.phone) ? ghPhone(o.phone) : clip(o.phone), alias: o.alias || [], rpw: o.rpw || '', rpwAt: o.rpwAt || '' };
       var k = ourKey(o);
       if (seen[k]) { res.dup++; return; }
       seen[k] = 1; all.push(o); res.added++;
@@ -942,8 +996,9 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     String(text || '').split(/\r?\n/).forEach(function (line, i) {
       if (!line.trim()) return;
       var p = line.indexOf('\t') >= 0 ? line.split('\t') : line.split(',');
-      if (i === 0 && /school/i.test(p[0]) && /district/i.test(p[1] || '')) return;     // a heading row
-      out.push({ name: p[0], district: p[1], location: p[2], emis: p[3], phone: p[4] });
+      if (i === 0 && /school/i.test(p[0]) && /region|district/i.test(p[1] || '')) return;     // a heading row
+      if (regionOf(p[1]) || p.length >= 6) out.push({ name: p[0], region: p[1], district: p[2], location: p[3], emis: p[4], phone: p[5] });
+      else out.push({ name: p[0], district: p[1], location: p[2], emis: p[3], phone: p[4] });      // older lists without the region
     });
     return out;
   }
@@ -955,25 +1010,26 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     return same.length === 1 ? same[0] : null;
   }
   function sentStatus(c) {
-    var list = ours(), dist = flt.dist, sentIds = {}, notOnList = [];
-    var scope = dist ? list.filter(function (o) { return norm(o.district) === dist; }) : list;
+    var list = ours(), dist = flt.dist, reg = flt.reg, sentIds = {}, notOnList = [];
+    function inScope(x) { return (!reg || norm(x.region) === reg) && (!dist || norm(x.district) === dist); }
+    var scope = list.filter(inScope);
     c.inCol.forEach(function (r) {
       var o = matchOf(r, list);
       if (o) sentIds[o.id] = r;
-      else if (!dist || norm(r.d.district) === dist) notOnList.push(r);
+      else if (inScope(r.d)) notOnList.push(r);
     });
-    var sent = c.list.length, exp = dist ? scope.length : (expected() || list.length);
+    var sent = c.list.length, exp = dist || reg ? scope.length : (expected() || list.length);
     var missing = scope.filter(function (o) { return !sentIds[o.id]; });
     return { list: list, scope: scope, missing: missing, notOnList: notOnList, sent: sent, exp: exp, notSent: Math.max(missing.length, exp - sent) };
   }
   function statusCard(c) {
-    var st = sentStatus(c), x = '<div class="card" id="ofStatus"><h2>Who has sent' + (flt.dist && c.dists[flt.dist] ? ' · ' + h(c.dists[flt.dist]) : '') + '</h2>';
+    var st = sentStatus(c), x = '<div class="card" id="ofStatus"><h2>Who has sent' + where(c) + '</h2>';
     if (st.exp) {
       x += '<p class="big-n"><b>' + fmt(st.sent) + ' of ' + fmt(st.exp) + '</b> schools have sent their data. <b style="color:var(--bad)">' + fmt(st.notSent) + '</b> not yet.</p>';
       x += '<div class="prog"><i style="width:' + Math.min(100, st.exp ? 100 * st.sent / st.exp : 0).toFixed(1) + '%"></i></div>';
     } else x += '<p>' + fmt(st.sent) + ' school(s) have sent. <span class="note">Type the number of schools you expect, or your list of schools, under "Our schools" above to see who has not sent.</span></p>';
     if (st.missing.length) {
-      x += '<h3 style="color:var(--bad)">Not sent yet (' + st.missing.length + ')</h3>' + tbl(['School', 'District', 'Location', 'EMIS'], st.missing.map(function (o) { return [h(o.name), h(o.district), h(o.location), h(o.emis)]; }), 9);
+      x += '<h3 style="color:var(--bad)">Not sent yet (' + st.missing.length + ')</h3>' + tbl(['School', 'Region', 'District', 'Location', 'EMIS'], st.missing.map(function (o) { return [h(o.name), h(o.region), h(o.district), h(o.location), h(o.emis)]; }), 9);
       x += '<button class="btn sm noprint" onclick="CEU.csvMissing()">⬇ Not sent yet (Excel)</button>';
     } else if (st.scope.length) x += '<div class="msg ok">Every school on your list has sent. ✔</div>';
     if (st.list.length && st.notSent > st.missing.length) x += '<p class="note">' + (st.notSent - st.missing.length) + ' more school(s) you expect are not on your list, so their names cannot be shown.</p>';
@@ -987,18 +1043,19 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     x += '<button class="btn sm" onclick="CEU.saveExpected()">Save the number</button><span class="note"> Leave it empty to use the number of schools on your list.</span>';
     x += '<details' + (list.length ? '' : ' open') + '><summary>Add a school</summary><div class="two">' +
       '<label class="f">School name<input id="ourName" placeholder="e.g. St. Mary R/C Basic"></label>' +
+      '<label class="f">Region' + regionSel('ourRegion') + '</label>' +
       '<label class="f">District<input id="ourDist"></label>' +
       '<label class="f">Location (town or village)<input id="ourLoc"></label>' +
       '<label class="f">EMIS code (if known)<input id="ourEmis"></label>' +
       '<label class="f">Head teacher\'s phone<input id="ourPhone" type="tel" placeholder="e.g. 0244123456"></label></div><button class="btn" onclick="CEU.addOne()">Add the school</button></details>';
-    x += '<details><summary>Add many schools at once</summary><p class="note">One school per line: <b>School name, District, Location, EMIS code, Head teacher\'s phone</b>. Leave a part empty if you do not have it. You can also copy the five columns from Excel and paste them here.</p>' +
-      '<textarea id="ourBulk" placeholder="St. Mary R/C Basic, Kumasi Metro, Asafo, EM001, 0244123456&#10;Holy Cross R/C Primary, Obuasi, Tutuka, , 0201234567"></textarea><button class="btn" onclick="CEU.addMany()">Add these schools</button></details>';
+    x += '<details><summary>Add many schools at once</summary><p class="note">One school per line: <b>School name, Region, District, Location, EMIS code, Head teacher\'s phone</b>. Leave a part empty if you do not have it. You can also copy the six columns from Excel and paste them here.</p>' +
+      '<textarea id="ourBulk" placeholder="St. Mary R/C Basic, Ashanti, Kumasi Metro, Asafo, EM001, 0244123456&#10;Holy Cross R/C Primary, Ashanti, Obuasi, Tutuka, , 0201234567"></textarea><button class="btn" onclick="CEU.addMany()">Add these schools</button></details>';
     x += '<div id="ourMsg"></div>';
     if (list.length) {
       x += '<details id="ourList"><summary>Our list (' + list.length + ' schools)</summary>';
       x += '<p class="note">When a school forgets its recovery password, tap <b>Show</b> and read it to them, after checking it is really the school.</p>';
       x += list.map(function (o) {
-        return '<div class="sch"><div class="sch-t"><b>' + h(o.name) + '</b><div class="note" style="margin:0">' + h([o.district, o.location, o.emis && 'EMIS ' + o.emis].filter(Boolean).join(' · ')) + '</div>' +
+        return '<div class="sch"><div class="sch-t"><b>' + h(o.name) + '</b><div class="note" style="margin:0">' + h([o.region, o.district, o.location, o.emis && 'EMIS ' + o.emis].filter(Boolean).join(' · ')) + '</div>' +
           '<div class="note" style="margin:0">📱 ' + (o.phone ? h(o.phone) + (phoneOk(o.phone) ? '' : ' <span style="color:var(--bad)">(not a 10-number phone)</span>') : '<span style="color:var(--bad)">no phone number</span>') + '</div>' +
           '<div class="note" style="margin:0">Recovery password: ' + (o.rpw ? '<span class="codebig" data-pwv="' + h(o.id) + '">••••••••</span> <button class="btn sm alt" data-pw="' + h(o.id) + '">Show</button>' : 'not received yet (it comes with the school\'s first data)') + '</div></div><div></div>' +
           '<div class="sch-b"><button class="btn sm alt" data-ph="' + h(o.id) + '">✎ Phone</button><button class="btn sm bad" data-odel="' + h(o.id) + '">Remove</button></div></div>';
@@ -1033,7 +1090,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if ($('ourList')) $('ourList').open = true;
   }
   function csvList() {
-    download('CEU_our_schools_' + today() + '.csv', csv([['School', 'District', 'Location', 'EMIS', 'Phone']].concat(ours().map(function (o) { return [o.name, o.district, o.location, o.emis, o.phone]; }))), 'text/csv');
+    download('CEU_our_schools_' + today() + '.csv', csv([['School', 'Region', 'District', 'Location', 'EMIS', 'Phone']].concat(ours().map(function (o) { return [o.name, o.region, o.district, o.location, o.emis, o.phone]; }))), 'text/csv');
   }
   /* forms whose school name and phone did not match the list */
   function pendingCard() {
@@ -1042,7 +1099,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var x = '<div class="card noprint" id="ofPending"><h2 style="color:var(--warn)">New schools waiting (' + pend.length + ')</h2><p class="note">These schools sent data, but their name and phone number do not match your list. Phone the school to check, then accept or refuse.</p>';
     pend.forEach(function (r) {
       var o = matchOf(r, list), why = !o ? 'Not on your list.' : !o.phone ? 'Your list has no phone number for this school.' : 'Phone ' + r.d.phone + ' is different from your list (' + o.phone + ').';
-      x += '<div class="sch"><div class="sch-t"><b>' + h(r.d.name) + '</b><div class="note" style="margin:0">' + h([r.d.district, r.d.location, '📱 ' + r.d.phone].filter(Boolean).join(' · ')) + '</div>' +
+      x += '<div class="sch"><div class="sch-t"><b>' + h(r.d.name) + '</b><div class="note" style="margin:0">' + h([r.d.region, r.d.district, r.d.location, '📱 ' + r.d.phone].filter(Boolean).join(' · ')) + '</div>' +
         '<div class="flag">' + h(why) + '</div><div class="note" style="margin:0">' + h(r.d.collection) + ' · sent ' + h(r.savedAt.slice(0, 10)) + '</div>' +
         '<label class="f" style="margin:6px 0 0">Accept as<select data-as="' + h(r.id) + '"><option value="new">A new school on my list</option>' +
         list.map(function (q) { return '<option value="' + h(q.id) + '"' + (o && o.id === q.id ? ' selected' : '') + '>' + h(q.name) + (q.district ? ' (' + h(q.district) + ')' : '') + '</option>'; }).join('') + '</select></label></div><div></div>' +
@@ -1054,7 +1111,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var pend = sget('ceu_pending') || [], r = pend.filter(function (q) { return q.id === id; })[0];
     if (!r) return;
     var list = ours(), o = list.filter(function (q) { return q.id === as; })[0];
-    if (!o) addOurs([{ name: r.d.name, district: r.d.district, location: r.d.location, emis: r.d.emis, phone: r.d.phone }]);
+    if (!o) addOurs([{ name: r.d.name, region: r.d.region, district: r.d.district, location: r.d.location, emis: r.d.emis, phone: r.d.phone }]);
     else {
       o.phone = ghPhone(r.d.phone);
       if (nameKey(o.name) !== nameKey(r.d.name)) o.alias = (o.alias || []).concat([nameKey(r.d.name)]);
@@ -1080,7 +1137,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     renderOur(); renderOffice();
     $('ourMsg').innerHTML = '<div class="msg ' + (r.added ? 'ok' : 'warn') + '">' + h(p.join(' ')) + '</div>';
   }
-  function addOne() { ourMsg(addOurs([{ name: $('ourName').value, district: $('ourDist').value, location: $('ourLoc').value, emis: $('ourEmis').value, phone: $('ourPhone').value }])); }
+  function addOne() { ourMsg(addOurs([{ name: $('ourName').value, region: $('ourRegion').value, district: $('ourDist').value, location: $('ourLoc').value, emis: $('ourEmis').value, phone: $('ourPhone').value }])); }
   function addMany() { ourMsg(addOurs(parseList($('ourBulk').value))); }
   function retryPending() { var pend = sget('ceu_pending') || []; if (pend.length) { sset('ceu_pending', []); addRecords(pend); } }
   function saveExpected() {
@@ -1091,7 +1148,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function clearList() { if (confirm('Remove your whole list of schools? The data the schools sent stays.')) { sset('ceu_schools', []); renderOur(); renderOffice(); } }
   function csvMissing() {
     var st = sentStatus(current());
-    download('CEU_not_sent_' + today() + '.csv', csv([['School', 'District', 'Location', 'EMIS']].concat(st.missing.map(function (o) { return [o.name, o.district, o.location, o.emis]; }))), 'text/csv');
+    download('CEU_not_sent_' + today() + '.csv', csv([['School', 'Region', 'District', 'Location', 'EMIS', 'Phone']].concat(st.missing.map(function (o) { return [o.name, o.region, o.district, o.location, o.emis, o.phone]; }))), 'text/csv');
   }
   /* files and pasted text may hold school forms, or a backup (forms + list of schools) */
   function importItems(items) {
@@ -1115,7 +1172,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function schoolSheet(r) {
     var d = r.d, t = totals(d), w = validate(d).warnings, x = '<div class="card" id="ofSchool">';
     x += '<button class="btn sm alt noprint" onclick="CEU.pick(\'\')">⬅ Back to all schools</button>';
-    x += '<h2 style="margin-top:8px">' + h(d.name) + '</h2><p class="note">' + [d.district, d.circuit && 'Circuit: ' + d.circuit, d.parish && 'Parish: ' + d.parish, d.emis && 'EMIS: ' + d.emis].filter(Boolean).map(h).join(' · ') + '</p>';
+    x += '<h2 style="margin-top:8px">' + h(d.name) + '</h2><p class="note">' + [d.region && d.region + ' Region', d.district, d.circuit && 'Circuit: ' + d.circuit, d.parish && 'Parish: ' + d.parish, d.emis && 'EMIS: ' + d.emis].filter(Boolean).map(h).join(' · ') + '</p>';
     x += tbl(['', ''], [['Head teacher', h(d.head || '–') + (d.phone ? ' · ' + h(d.phone) : '')], ['Filled in by', h(d.filledBy || '–')], ['Sent', h(r.savedAt.slice(0, 16).replace('T', ' '))],
       ['Levels', LEVELS.filter(function (l) { return d[l[2]]; }).map(function (l) { return l[1]; }).join(', ')], ['Collection', h(d.collection)]], 9);
     x += '<div class="tiles" style="margin-top:10px">' + tile(fmt(t.p), 'pupils (' + fmt(t.b) + ' boys, ' + fmt(t.g) + ' girls)') + tile(fmt(t.teach), 'teachers') + tile(t.teach ? fmt(t.p / t.teach, 1) : '–', 'pupils per teacher') + tile(pct(t.trained, t.teach), 'teachers trained') + tile(ratio(t.p, n(d, 'f_cls')), 'pupils per classroom') + '</div>';
@@ -1139,20 +1196,26 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     return x + '</div>';
   }
   function pick(id) { flt.sch = id; renderOffice(); var el = $(id ? 'ofSchool' : 'ofBody'); if (el) el.scrollIntoView(); }
-  var flt = { col: null, dist: '', sch: '' };
+  var flt = { col: null, reg: '', dist: '', sch: '' };
+  function where(c) { return (flt.reg && c.regs[flt.reg] ? ' · ' + h(c.regs[flt.reg]) + ' Region' : '') + (flt.dist && c.dists[flt.dist] ? ' · ' + h(c.dists[flt.dist]) : ''); }
   function current() {
     var all = recs(), cols = {}, order = [];
     all.forEach(function (r) { var k = norm(r.d.collection); if (!cols[k]) { cols[k] = { name: r.d.collection, latest: '' }; order.push(k); } if (r.savedAt > cols[k].latest) cols[k].latest = r.savedAt; });
     order.sort(function (a, b) { return cols[a].latest < cols[b].latest ? 1 : -1; });
     if (!flt.col || !cols[flt.col]) flt.col = order[0] || null;
-    var inCol = all.filter(function (r) { return norm(r.d.collection) === flt.col; });
-    var dists = {}, dorder = [];
-    inCol.concat(ours().map(function (o) { return { d: o }; })).forEach(function (r) { var k = norm(r.d.district); if (k && !dists[k]) { dists[k] = r.d.district; dorder.push(k); } });
+    var inCol = all.filter(function (r) { return norm(r.d.collection) === flt.col; }), lst = ours().map(function (o) { return { d: o }; });
+    var regs = {}, rorder = [];
+    inCol.concat(lst).forEach(function (r) { var k = norm(r.d.region); if (k && !regs[k]) { regs[k] = r.d.region; rorder.push(k); } });
+    rorder.sort(function (a, b) { return regs[a] < regs[b] ? -1 : 1; });
+    if (flt.reg && !regs[flt.reg]) flt.reg = '';
+    function inReg(r) { return !flt.reg || norm(r.d.region) === flt.reg; }
+    var inScope = inCol.filter(inReg), dists = {}, dorder = [];
+    inScope.concat(lst.filter(inReg)).forEach(function (r) { var k = norm(r.d.district); if (k && !dists[k]) { dists[k] = r.d.district; dorder.push(k); } });
     dorder.sort(function (a, b) { return dists[a] < dists[b] ? -1 : 1; });
     if (flt.dist && !dists[flt.dist]) flt.dist = '';
-    var list = flt.dist ? inCol.filter(function (r) { return norm(r.d.district) === flt.dist; }) : inCol;
+    var list = flt.dist ? inScope.filter(function (r) { return norm(r.d.district) === flt.dist; }) : inScope.slice();
     list.sort(function (a, b) { return String(a.d.name).toLowerCase() < String(b.d.name).toLowerCase() ? -1 : 1; });
-    return { all: all, cols: cols, order: order, inCol: inCol, dists: dists, dorder: dorder, list: list };
+    return { all: all, cols: cols, order: order, inCol: inCol, inScope: inScope, regs: regs, rorder: rorder, dists: dists, dorder: dorder, list: list };
   }
   function renderOffice() {
     var c = current(), body = $('ofBody');
@@ -1161,12 +1224,13 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var one = flt.sch ? c.list.filter(function (r) { return r.id === flt.sch; })[0] : null;
     if (!one) flt.sch = '';
     x += '<div class="card noprint"><div class="two"><label class="f">Collection<select id="ofCol">' + c.order.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.col ? ' selected' : '') + '>' + h(c.cols[k].name) + '</option>'; }).join('') + '</select></label>';
-    x += '<label class="f">District<select id="ofDist"><option value="">All districts</option>' + c.dorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.dist ? ' selected' : '') + '>' + h(c.dists[k]) + '</option>'; }).join('') + '</select></label></div>';
+    x += '<div class="two"><label class="f">Region<select id="ofReg"><option value="">All regions</option>' + c.rorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.reg ? ' selected' : '') + '>' + h(c.regs[k]) + '</option>'; }).join('') + '</select></label>';
+    x += '<label class="f">District<select id="ofDist"><option value="">All districts' + (flt.reg ? ' in this region' : '') + '</option>' + c.dorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.dist ? ' selected' : '') + '>' + h(c.dists[k]) + '</option>'; }).join('') + '</select></label></div></div>';
     x += '<label class="f">Schools that have sent (' + c.list.length + ')<select id="ofSch"><option value="">All schools – see the statistics</option>' + c.list.map(function (r) { return '<option value="' + h(r.id) + '"' + (r.id === flt.sch ? ' selected' : '') + '>' + h(r.d.name) + ' – ' + h(r.d.district) + '</option>'; }).join('') + '</select></label>';
-    x += '<button class="btn sm" onclick="CEU.csvAll()">⬇ All schools (Excel)</button><button class="btn sm" onclick="CEU.csvSummary()">⬇ Summary by district (Excel)</button><button class="btn sm alt" onclick="window.print()">🖨 Print / PDF</button></div>';
+    x += '<button class="btn sm" onclick="CEU.csvAll()">⬇ All schools (Excel)</button><button class="btn sm" onclick="CEU.csvSummary()">⬇ Summary by region and district (Excel)</button><button class="btn sm alt" onclick="window.print()">🖨 Print / PDF</button></div>';
     if (one) { body.innerHTML = x + schoolSheet(one); wireOffice(body); return; }
     x = pendingCard() + x + statusCard(c);
-    x += '<div class="card"><h2>' + h(c.cols[flt.col].name) + (flt.dist ? ' · ' + h(c.dists[flt.dist]) : ' · all districts') + '</h2><div class="tiles" id="ofTiles">';
+    x += '<div class="card"><h2>' + h(c.cols[flt.col].name) + (flt.reg || flt.dist ? where(c) : ' · all regions') + '</h2><div class="tiles" id="ofTiles">';
     x += tile(fmt(T.n), 'schools') + tile(fmt(T.p), 'pupils (' + fmt(T.b) + ' boys, ' + fmt(T.g) + ' girls)') + tile(fmt(T.teach), 'teachers (' + fmt(s.t_m) + ' male, ' + fmt(s.t_f) + ' female)');
     x += tile(T.ptr == null ? '–' : fmt(T.ptr, 1), 'pupils per teacher') + tile(pct(T.trained, T.teach), 'teachers trained') + tile(T.gpi == null ? '–' : fmt(T.gpi, 2), 'gender parity (girls ÷ boys)');
     x += tile(ratio(T.p, s.f_cls), 'pupils per classroom') + tile(T.passRate == null ? '–' : pct(T.passAll, T.satAll), 'exam pass rate (aggregate 6–30)');
@@ -1216,11 +1280,19 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       ['Schools with safe water', fmt(T.yes.f_water), pct(T.yes.f_water, T.n) + ' of schools'],
       ['Schools with electricity', fmt(T.yes.f_elec), pct(T.yes.f_elec, T.n) + ' of schools'],
       ['Schools with a library', fmt(T.yes.f_lib), pct(T.yes.f_lib, T.n) + ' of schools']]) + '</div>';
-    /* districts */
-    if (!flt.dist && c.dorder.length > 1) {
-      x += '<div class="card"><h2>Districts compared</h2>' + tbl(['District', 'Schools', 'Pupils', 'Girls ÷ boys', 'Teachers', 'Pupils per teacher', 'Trained', 'Pass rate'], c.dorder.map(function (k) {
-        var D = compute(c.inCol.filter(function (r) { return norm(r.d.district) === k; }));
-        return [h(c.dists[k]), fmt(D.n), fmt(D.p), D.gpi == null ? '–' : fmt(D.gpi, 2), fmt(D.teach), D.ptr == null ? '–' : fmt(D.ptr, 1), pct(D.trained, D.teach), D.passRate == null ? '–' : pct(D.passAll, D.satAll)];
+    /* regions, and the districts within the region */
+    function cmpRow(name, D) { return [name, fmt(D.n), fmt(D.p), D.gpi == null ? '–' : fmt(D.gpi, 2), fmt(D.teach), D.ptr == null ? '–' : fmt(D.ptr, 1), pct(D.trained, D.teach), D.passRate == null ? '–' : pct(D.passAll, D.satAll)]; }
+    var CMP = ['Schools', 'Pupils', 'Girls ÷ boys', 'Teachers', 'Pupils per teacher', 'Trained', 'Pass rate'];
+    if (!flt.reg && !flt.dist && c.rorder.length > 1) {
+      x += '<div class="card" id="ofRegions"><h2>Regions compared</h2>' + tbl(['Region'].concat(CMP), c.rorder.map(function (k) {
+        return cmpRow(h(c.regs[k]), compute(c.inCol.filter(function (r) { return norm(r.d.region) === k; })));
+      })) + '</div>';
+    }
+    var withData = c.dorder.filter(function (k) { return c.inScope.some(function (r) { return norm(r.d.district) === k; }); });
+    if (!flt.dist && withData.length > 1) {
+      x += '<div class="card" id="ofDistricts"><h2>' + (flt.reg ? 'Districts in ' + h(c.regs[flt.reg]) + ' Region compared' : 'Districts compared') + '</h2>' + tbl(['District'].concat(CMP), withData.map(function (k) {
+        var rows = c.inScope.filter(function (r) { return norm(r.d.district) === k; });
+        return cmpRow(h(c.dists[k]) + (flt.reg || !rows[0].d.region ? '' : '<div class="note" style="margin:0">' + h(rows[0].d.region) + '</div>'), compute(rows));
       })) + '</div>';
     }
     /* schools */
@@ -1240,7 +1312,8 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   }
   function wireOffice(body) {
     var i, el;
-    if ((el = $('ofCol'))) el.onchange = function () { flt.col = this.value; flt.dist = ''; flt.sch = ''; renderOffice(); };
+    if ((el = $('ofCol'))) el.onchange = function () { flt.col = this.value; flt.reg = ''; flt.dist = ''; flt.sch = ''; renderOffice(); };
+    if ((el = $('ofReg'))) el.onchange = function () { flt.reg = this.value; flt.dist = ''; flt.sch = ''; renderOffice(); };
     if ((el = $('ofDist'))) el.onchange = function () { flt.dist = this.value; flt.sch = ''; renderOffice(); };
     if ((el = $('ofSch'))) el.onchange = function () { pick(this.value); };
     var views = body.querySelectorAll('[data-view]');
@@ -1268,15 +1341,22 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var c = current(), head = ALLKEYS.map(function (k) { return LABEL[k] || k; }).concat(['Total pupils', 'Total teachers', 'Saved at', 'Checks']);
     var rows = [head].concat(c.list.map(function (r) {
       var t = totals(r.d);
-      return ALLKEYS.map(function (k) { var v = r.d[k]; return v === true ? 'Yes' : v; }).concat([t.p, t.teach, r.savedAt, validate(r.d).warnings.map(function (w) { return w.m; }).join(' | ')]);
+      return ALLKEYS.map(function (k) { return cellVal(r.d[k]); }).concat([t.p, t.teach, r.savedAt, validate(r.d).warnings.map(function (w) { return w.m; }).join(' | ')]);
     }));
     download('CEU_' + fileSafe(c.cols[flt.col].name) + '_schools.csv', csv(rows), 'text/csv');
   }
   function csvSummary() {
-    var c = current(), rows = [['District', 'Schools', 'Boys', 'Girls', 'Pupils', 'Girls per boy', 'Teachers', 'Trained teachers', '% trained', 'Pupils per teacher', 'Classrooms', 'Pupils per classroom', 'Dropouts', 'Candidates sat', 'Passed (agg 6-30)', 'Pass rate %']];
-    function row(name, D) { return [name, D.n, D.b, D.g, D.p, D.gpi == null ? '' : +D.gpi.toFixed(2), D.teach, D.trained, D.teach ? +(100 * D.trained / D.teach).toFixed(1) : '', D.ptr == null ? '' : +D.ptr.toFixed(1), D.s.f_cls, D.s.f_cls ? +(D.p / D.s.f_cls).toFixed(1) : '', D.s.drop_b + D.s.drop_g, D.satAll, D.passAll, D.satAll ? +(100 * D.passAll / D.satAll).toFixed(1) : '']; }
-    c.dorder.forEach(function (k) { rows.push(row(c.dists[k], compute(c.inCol.filter(function (r) { return norm(r.d.district) === k; })))); });
-    rows.push(row('ALL DISTRICTS', compute(c.inCol)));
+    var c = current(), rows = [['Region', 'District', 'Schools', 'Boys', 'Girls', 'Pupils', 'Girls per boy', 'Teachers', 'Trained teachers', '% trained', 'Pupils per teacher', 'Classrooms', 'Pupils per classroom', 'Dropouts', 'Candidates sat', 'Passed (agg 6-30)', 'Pass rate %']];
+    function row(reg, name, D) { return [reg, name, D.n, D.b, D.g, D.p, D.gpi == null ? '' : +D.gpi.toFixed(2), D.teach, D.trained, D.teach ? +(100 * D.trained / D.teach).toFixed(1) : '', D.ptr == null ? '' : +D.ptr.toFixed(1), D.s.f_cls, D.s.f_cls ? +(D.p / D.s.f_cls).toFixed(1) : '', D.s.drop_b + D.s.drop_g, D.satAll, D.passAll, D.satAll ? +(100 * D.passAll / D.satAll).toFixed(1) : '']; }
+    c.rorder.forEach(function (rk) {
+      if (flt.reg && rk !== flt.reg) return;
+      var inR = c.inCol.filter(function (r) { return norm(r.d.region) === rk; }), ds = {};
+      inR.forEach(function (r) { var k = norm(r.d.district); if (!ds[k]) { ds[k] = 1; rows.push(row(c.regs[rk], r.d.district, compute(inR.filter(function (q) { return norm(q.d.district) === k; })))); } });
+      if (inR.length) rows.push(row(c.regs[rk], 'ALL ' + c.regs[rk].toUpperCase(), compute(inR)));
+    });
+    var noReg = c.inCol.filter(function (r) { return !norm(r.d.region); });
+    if (noReg.length && !flt.reg) rows.push(row('', 'NO REGION GIVEN', compute(noReg)));
+    rows.push(row(flt.reg ? c.regs[flt.reg] : '', flt.reg ? 'ALL ' + c.regs[flt.reg].toUpperCase() : 'ALL REGIONS', compute(c.inScope)));
     download('CEU_' + fileSafe(c.cols[flt.col].name) + '_summary.csv', csv(rows), 'text/csv');
   }
   function backup() { download('CEU_backup_' + today() + '.json', JSON.stringify({ app: 'CEU-BACKUP', v: 1, recs: recs(), schools: ours(), expected: expected(), pending: sget('ceu_pending') || [] }), 'application/json'); }
