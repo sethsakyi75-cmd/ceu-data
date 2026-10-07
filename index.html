@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CEU School Data</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f3f8f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CEU Data">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--ink:#1c2430;--mute:#5b6676;--line:#d6dce8;--pri:#1f3f8f;--pri2:#e9eefb;--gold:#b8860b;--ok:#1d7a46;--okbg:#e5f4eb;--bad:#b3261e;--badbg:#fdecea;--warn:#7a5000;--warnbg:#fff3d1;--boy:#3b6fd8;--girl:#d4467a}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--pri);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+header .t{flex:1;min-width:0}
+header h1{margin:0;font-size:1.1rem}
+header p{margin:1px 0 0;font-size:.82rem;opacity:.85}
+header button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);padding:7px 12px;border-radius:8px;font-size:.9rem}
+main{max-width:920px;margin:0 auto;padding:12px 12px 120px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px}
+.card h2{margin:0 0 6px;font-size:1.05rem;color:var(--pri)}
+.card h3{margin:14px 0 6px;font-size:.98rem}
+.note{color:var(--mute);font-size:.88rem;margin:2px 0 10px}
+label.f{display:block;margin:0 0 10px;font-size:.9rem;color:var(--mute)}
+label.f input,label.f select{display:block;width:100%;margin-top:3px}
+input,select,textarea{font:inherit;color:var(--ink);background:#fff;border:1px solid #b9c2d3;border-radius:8px;padding:9px 10px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);border-color:var(--pri)}
+textarea{width:100%;min-height:90px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media(max-width:560px){.two{grid-template-columns:1fr}}
+.checks label{display:inline-flex;align-items:center;gap:6px;margin:0 14px 8px 0;font-size:1rem;color:var(--ink)}
+.checks input{width:22px;height:22px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:.82rem;color:var(--mute);font-weight:600}
+td.r,th.r{text-align:right}
+table.grid input{width:100%;min-width:56px;text-align:right;padding:8px 6px}
+table.grid td.tot,table.grid tr.sum td{font-weight:700;text-align:right}
+table.grid tr.sum td{border-top:2px solid var(--ink)}
+.wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.btn{display:inline-block;border:0;border-radius:10px;background:var(--pri);color:#fff;font:inherit;font-weight:600;padding:12px 16px;margin:4px 6px 4px 0;cursor:pointer;text-decoration:none;text-align:center}
+.btn.alt{background:var(--pri2);color:var(--pri)}
+.btn.ok{background:var(--ok)}
+.btn.bad{background:var(--badbg);color:var(--bad)}
+.btn.big{display:block;width:100%;font-size:1.05rem;padding:16px;margin:8px 0}
+.btn.sm{padding:6px 10px;font-size:.85rem;font-weight:500}
+.msg{border-radius:10px;padding:10px 12px;margin:8px 0;font-size:.95rem}
+.msg.ok{background:var(--okbg);color:var(--ok)}
+.msg.bad{background:var(--badbg);color:var(--bad)}
+.msg.warn{background:var(--warnbg);color:var(--warn)}
+.msg ul{margin:6px 0 0;padding-left:20px}
+input.e,select.e{border-color:var(--bad);background:var(--badbg)}
+input.w,select.w{border-color:#d29c00;background:var(--warnbg)}
+.live{font-size:.9rem;margin:4px 0 0}
+.live.ok{color:var(--ok)}.live.bad{color:var(--bad)}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:10px 12px;box-shadow:0 -2px 10px rgba(0,0,0,.06)}
+.bar .in{max-width:920px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.bar .btn{flex:1;margin:0}
+.bar small{color:var(--mute);max-width:40%}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{background:var(--pri2);border-radius:10px;padding:10px 12px}
+.tile b{display:block;font-size:1.35rem;color:var(--pri)}
+.tile span{font-size:.82rem;color:var(--mute)}
+.sch{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;border-bottom:1px solid var(--line);padding:8px 0}
+.sch-b{grid-column:1/-1}
+.codebig{font:700 1.15rem ui-monospace,Menlo,Consolas,monospace;letter-spacing:.06em;color:var(--pri)}
+.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.75rem;word-break:break-all;min-height:70px}
+.hide{display:none!important}
+.legend{font-size:.82rem;color:var(--mute);margin:4px 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
+svg{max-width:100%;height:auto;display:block}
+.flag{color:var(--warn);font-size:.85rem}
+.prog{background:#e3e8f2;border-radius:8px;height:14px;overflow:hidden;margin:6px 0 10px}
+.prog i{display:block;height:100%;background:var(--ok)}
+.big-n{font-size:1.25rem}
+details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
+.home-ic{font-size:2rem;line-height:1}
+@media print{header button,.bar,.noprint,.btn{display:none!important}body{background:#fff}.card{break-inside:avoid;border-color:#bbb}main{padding:0}}
+</style>
+</head>
+<body>
+<header>
+  <div class="home-ic">✝</div>
+  <div class="t"><h1>Catholic Education Unit</h1><p id="hdSub">School data collection · works without internet</p></div>
+  <button id="hdLock" class="hide" onclick="CEU.lock()">🔒 Lock</button>
+  <button id="hdHome" class="hide" onclick="CEU.go('home')">Home</button>
+</header>
+<main>
+  <!-- HOME -->
+  <section id="home">
+    <div class="card">
+      <h2>What do you want to do?</h2>
+      <p class="note">This works without internet. Your typing is kept on this device until you finish.</p>
+      <div id="installTip"></div>
+      <button class="btn big" onclick="CEU.go('gate')">📝 Fill in a school's data</button>
+      <p class="note">For head teachers, or an officer visiting a school. Register the school once on this phone, then log in with its PIN.</p>
+      <button class="btn big alt" onclick="CEU.go('office')">🔒 Unit office: see the statistics</button>
+      <p class="note">For the Unit office only. It needs the office password.</p>
+    </div>
+  </section>
+
+  <!-- SCHOOL CODE -->
+  <section id="gate" class="hide"></section>
+
+  <!-- SCHOOL FORM -->
+  <section id="school" class="hide">
+    <div id="schoolTop"></div>
+    <div id="sendBox" class="hide"></div>
+    <div id="formArea">
+      <div id="chk"></div>
+      <form id="schoolForm" onsubmit="return false" autocomplete="off"></form>
+    </div>
+  </section>
+
+  <!-- UNIT OFFICE -->
+  <section id="office" class="hide">
+    <div id="ofLock" class="hide"></div>
+    <div id="ofMain">
+    <div class="card noprint">
+      <h2>Add schools' data</h2>
+      <p class="note">Choose the files the schools sent (you can choose many at once), or paste the text they sent by WhatsApp.</p>
+      <label class="btn">📂 Choose files<input id="ofFiles" type="file" multiple accept=".json,.txt,application/json,text/plain" class="hide"></label>
+      <details style="margin-top:6px"><summary>Paste text sent by WhatsApp</summary>
+        <textarea id="ofPaste" placeholder="Paste here. It starts with CEU1:"></textarea>
+        <button class="btn" onclick="CEU.addPasted()">Add</button>
+      </details>
+      <div id="ofMsg"></div>
+    </div>
+    <div id="ourCard" class="card noprint"></div>
+    <div id="ofBody"></div>
+    </div>
+  </section>
+</main>
+<div class="bar hide" id="schoolBar"><div class="in"><small id="draftState">Kept on this device</small><button class="btn ok" onclick="CEU.finish(false)">Check and finish ✔</button></div></div>
+
+<script>
+(function () {
+  'use strict';
+  /* ---------- what is collected ---------- */
+  var CLS = [['KG1', 'KG 1', 'KG'], ['KG2', 'KG 2', 'KG'], ['B1', 'Basic 1', 'P'], ['B2', 'Basic 2', 'P'], ['B3', 'Basic 3', 'P'], ['B4', 'Basic 4', 'P'], ['B5', 'Basic 5', 'P'], ['B6', 'Basic 6', 'P'], ['J1', 'JHS 1', 'J'], ['J2', 'JHS 2', 'J'], ['J3', 'JHS 3', 'J']];
+  var LEVELS = [['KG', 'Kindergarten', 'lvKG'], ['P', 'Primary', 'lvP'], ['J', 'JHS', 'lvJ']];
+  var SUBJ = [['ENG', 'English'], ['MATH', 'Mathematics'], ['SCI', 'Science'], ['SOC', 'Social Studies'], ['RME', 'Religious & Moral Ed.'], ['COMP', 'Computing'], ['CT', 'Career Technology'], ['CAD', 'Creative Arts & Design'], ['GHL', 'Ghanaian Language'], ['FRE', 'French']];
+  var BANDS = ['6–10', '11–15', '16–20', '21–25', '26–30', '31–36', '37–54'];
+  var MID = [8, 13, 18, 23, 28, 33.5, 45.5];
+  var PASS_BANDS = 5;                              // aggregate 6 to 30
+  var OTHER = ['adm_b', 'adm_g', 'drop_b', 'drop_g', 'sen_b', 'sen_g'];
+  var STAFF = ['t_m', 't_f', 'tr_m', 'tr_f', 'q_deg', 'q_dip', 'q_cert', 'q_oth', 'nt_m', 'nt_f', 'vac'];
+  var QUAL = ['q_deg', 'q_dip', 'q_cert', 'q_oth'];
+  var FACN = ['f_cls', 'f_clsg', 'f_seat', 'f_toi', 'f_toiw', 'f_comp', 'f_compw', 'f_book'];
+  var FACY = ['f_water', 'f_elec', 'f_lib'];
+  var XB = ['x_b1', 'x_b2', 'x_b3', 'x_b4', 'x_b5', 'x_b6', 'x_b7'];
+
+  var LABEL = {
+    collection: 'Collection name', name: 'School name', emis: 'EMIS code', district: 'District', location: 'Location', circuit: 'Circuit', parish: 'Parish',
+    head: 'Head teacher', phone: 'Phone', filledBy: 'Filled in by', lvKG: 'Has KG', lvP: 'Has Primary', lvJ: 'Has JHS',
+    adm_b: 'New admissions boys', adm_g: 'New admissions girls', drop_b: 'Dropouts boys', drop_g: 'Dropouts girls',
+    sen_b: 'Special needs boys', sen_g: 'Special needs girls',
+    t_m: 'Teachers male', t_f: 'Teachers female', tr_m: 'Trained teachers male', tr_f: 'Trained teachers female',
+    q_deg: 'Teachers with a degree', q_dip: 'Teachers with a diploma', q_cert: 'Teachers with Cert A', q_oth: 'Teachers with other/no teaching qualification',
+    nt_m: 'Non-teaching staff male', nt_f: 'Non-teaching staff female', vac: 'Teacher vacancies',
+    x_name: 'Exam name', x_reg: 'Candidates registered', x_sat: 'Candidates who sat', x_mean: 'Mean aggregate',
+    f_cls: 'Classrooms', f_clsg: 'Classrooms in good condition', f_seat: 'Seats for pupils', f_toi: 'Toilets', f_toiw: 'Toilets working',
+    f_comp: 'Computers', f_compw: 'Computers working', f_book: 'Core textbooks', f_water: 'Safe drinking water', f_elec: 'Electricity', f_lib: 'Library'
+  };
+  CLS.forEach(function (c) { LABEL['e_' + c[0] + '_b'] = c[1] + ' boys'; LABEL['e_' + c[0] + '_g'] = c[1] + ' girls'; });
+  XB.forEach(function (k, i) { LABEL[k] = 'Aggregate ' + BANDS[i]; });
+  SUBJ.forEach(function (s) { LABEL['c_' + s[0]] = s[1] + ' (grades 1–6)'; });
+  var TEXTK = ['collection', 'name', 'emis', 'district', 'location', 'circuit', 'parish', 'head', 'phone', 'filledBy'];
+  var ALLKEYS = TEXTK.concat(['lvKG', 'lvP', 'lvJ']);
+  CLS.forEach(function (c) { ALLKEYS.push('e_' + c[0] + '_b', 'e_' + c[0] + '_g'); });
+  ALLKEYS = ALLKEYS.concat(OTHER, STAFF, ['x_name', 'x_reg', 'x_sat'], XB, ['x_mean'], SUBJ.map(function (s) { return 'c_' + s[0]; }), FACN, FACY);
+
+  /* ---------- small helpers ---------- */
+  var MEM = {};
+  function sget(k) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return MEM[k] || null; } }
+  function sset(k, v) { MEM[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  function sdel(k) { delete MEM[k]; try { localStorage.removeItem(k); } catch (e) {} }
+  function $(id) { return document.getElementById(id); }
+  function h(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function has(d, k) { return typeof d[k] === 'number' && isFinite(d[k]); }
+  function n(d, k) { return has(d, k) ? d[k] : 0; }
+  function fmt(v, dp) {
+    if (v == null || !isFinite(v)) return '–';
+    var s = Number(v).toFixed(dp || 0), p = s.split('.');
+    p[0] = p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return p.join('.');
+  }
+  function pct(a, b) { return b > 0 ? fmt(100 * a / b, 1) + '%' : '–'; }
+  function ratio(a, b, dp) { return b > 0 ? fmt(a / b, dp == null ? 1 : dp) : '–'; }
+  function norm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ''); }
+  function names(ks) { return ks.map(function (k) { return LABEL[k] || k; }).join(', '); }
+  function rid() { return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function fnv(s) { var x = 0x811c9dc5; for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = (x + ((x << 1) + (x << 4) + (x << 7) + (x << 8) + (x << 24))) >>> 0; } return ('0000000' + x.toString(16)).slice(-8); }
+  function stable(d) { return JSON.stringify(Object.keys(d).sort().map(function (k) { return [k, d[k]]; })); }
+  function sumOf(r) { return fnv(r.id + '|' + r.savedAt + '|' + stable(r.d)); }
+  function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
+  function unb64(s) { return decodeURIComponent(escape(atob(s))); }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function fileSafe(s) { return String(s || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'school'; }
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    if (window.navigator.msSaveBlob) { window.navigator.msSaveBlob(blob, name); return; }
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.parentNode.removeChild(a); }, 3000);
+  }
+  function copyText(t, done) {
+    function fallback() {
+      var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.top = '-200px';
+      document.body.appendChild(ta); ta.select(); var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta); done(ok);
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(function () { done(true); }, fallback); else fallback();
+  }
+
+
+  /* ---------- secret codes and hashing ---------- */
+  function sha256(str) {
+    str = unescape(encodeURIComponent(str));
+    function rr(v, a) { return (v >>> a) | (v << (32 - a)); }
+    var mw = 4294967296, i, j, out = '', words = [], bl = str.length * 8, H = [], K = [], pc = 0, comp = {};
+    for (var c = 2; pc < 64; c++) {
+      if (!comp[c]) { for (i = 0; i < 313; i += c) comp[i] = c; H[pc] = (Math.pow(c, 0.5) * mw) | 0; K[pc++] = (Math.pow(c, 1 / 3) * mw) | 0; }
+    }
+    H = H.slice(0, 8);
+    str += '\x80';
+    while (str.length % 64 - 56) str += '\x00';
+    for (i = 0; i < str.length; i++) { j = str.charCodeAt(i); words[i >> 2] |= j << ((3 - i) % 4) * 8; }
+    words[words.length] = (bl / mw) | 0;
+    words[words.length] = bl;
+    for (j = 0; j < words.length;) {
+      var w = words.slice(j, j += 16), old = H;
+      H = H.slice(0, 8);
+      for (i = 0; i < 64; i++) {
+        var w15 = w[i - 15], w2 = w[i - 2], a = H[0], e = H[4];
+        var t1 = H[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & H[5]) ^ ((~e) & H[6])) + K[i] +
+          (w[i] = (i < 16) ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);
+        var t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & H[1]) ^ (a & H[2]) ^ (H[1] & H[2]));
+        H = [(t1 + t2) | 0].concat(H);
+        H[4] = (H[4] + t1) | 0;
+      }
+      for (i = 0; i < 8; i++) H[i] = (H[i] + old[i]) | 0;
+    }
+    for (i = 0; i < 8; i++) for (j = 3; j + 1; j--) { var b = (H[i] >> (j * 8)) & 255; out += (b < 16 ? '0' : '') + b.toString(16); }
+    return out;
+  }
+  function rnd(nm) { try { var a = new Uint32Array(1); window.crypto.getRandomValues(a); return a[0] % nm; } catch (e) { return Math.floor(Math.random() * nm); } }
+  function pwHash(salt, pw) { var x = salt + ':' + pw; for (var i = 0; i < 1000; i++) x = sha256(x + ':' + salt); return x; }
+  function newPin() { var p = String(1 + rnd(9)); for (var i = 0; i < 5; i++) p += rnd(10); return p; }
+  /* the recovery password travels to the office inside each form, scrambled so it cannot be read at a glance */
+  var SCR = 'CEU-unit-recovery';
+  function scramble(t) { var o = ''; for (var i = 0; i < t.length; i++) o += String.fromCharCode(t.charCodeAt(i) ^ SCR.charCodeAt(i % SCR.length)); return btoa(o); }
+  function unscramble(t) { try { var x = atob(t), o = ''; for (var i = 0; i < x.length; i++) o += String.fromCharCode(x.charCodeAt(i) ^ SCR.charCodeAt(i % SCR.length)); return o; } catch (e) { return ''; } }
+  function ghPhone(v) { var p = String(v || '').replace(/[^\d+]/g, ''); if (/^\+233\d{9}$/.test(p)) return '0' + p.slice(4); if (/^233\d{9}$/.test(p)) return '0' + p.slice(3); return p; }
+  function phoneOk(v) { return /^0\d{9}$/.test(ghPhone(v)); }
+
+  /* ---------- schools on this phone: register, PIN, recovery password ---------- */
+  var session = { school: null }, tries = { n: 0, until: 0 };
+  function regs() { return sget('ceu_regs') || []; }
+  function saveReg(r) { var all = regs().filter(function (q) { return q.id !== r.id; }); all.push(r); sset('ceu_regs', all); }
+  function draftKey() { return 'ceu_draft_' + (session.school ? session.school.id : 'none'); }
+  function findReg(name, phone) { var nk = nameKey(name), ph = ghPhone(phone); return regs().filter(function (r) { return nameKey(r.name) === nk && ghPhone(r.phone) === ph; })[0] || null; }
+  function slow() { var now = Date.now(); return now < tries.until ? 'Too many wrong tries. Wait ' + Math.ceil((tries.until - now) / 1000) + ' seconds.' : ''; }
+  function wrong() { if (++tries.n >= 5) { tries.n = 0; tries.until = Date.now() + 30000; } }
+  function val(id) { return $(id) ? String($(id).value || '').trim() : ''; }
+  function gmsg(html, cls) { $('gtMsg').innerHTML = html ? '<div class="msg ' + (cls || 'bad') + '">' + html + '</div>' : ''; }
+  function bind(id, f) { var el = $(id); if (el) el.onclick = f; }
+  function fld(id, label, type, extra) { return '<label class="f">' + label + '<input id="' + id + '" type="' + (type || 'text') + '"' + (extra || '') + '></label>'; }
+  var NUM = ' inputmode="numeric" autocomplete="off" maxlength="8"';
+  function renderGate(view, msg, pick) {
+    var list = regs(), s = '<div class="card">';
+    view = view || 'login';
+    if (view === 'login') {
+      s += '<h2>School log in</h2>';
+      if (!list.length) s += '<p>Register your school first. You do this once on this phone.</p><button class="btn big" id="gtReg">Register my school</button>';
+      else {
+        s += '<label class="f">School<select id="gtSchool">' + list.map(function (r) { return '<option value="' + h(r.id) + '">' + h(r.name) + ' – ' + h(r.district) + '</option>'; }).join('') + '</select></label>';
+        s += fld('gtPin', 'PIN', 'password', NUM) + '<button class="btn big" id="gtLogin">Log in</button>';
+        s += '<button class="btn alt" id="gtGet">🔑 Get a PIN (first time, or forgotten PIN)</button><button class="btn alt" id="gtReg">Register another school</button>';
+      }
+    } else if (view === 'register') {
+      s += '<h2>Register your school</h2><p class="note">Use the head teacher\'s phone number. The Unit office checks the school name and phone number against its list.</p><div class="two">' +
+        fld('rgName', 'School name', 'text', ' placeholder="e.g. St. Mary R/C Basic"') + fld('rgDist', 'District') + fld('rgLoc', 'Location (town or village)') + fld('rgEmis', 'EMIS code (if known)') +
+        fld('rgHead', 'Head teacher') + fld('rgPhone', 'Head teacher\'s phone', 'tel', ' placeholder="e.g. 0244123456"') + '</div><button class="btn big" id="rgBtn">Register</button><button class="btn alt" id="gtBack">Back</button>';
+    } else if (view === 'get') {
+      s += '<h2>Get a PIN</h2><p class="note">Type the school name and the phone number you registered with. After your first log in, you also need your recovery password.</p>' +
+        fld('gpName', 'School name') + fld('gpPhone', 'Phone number used to register', 'tel') + fld('gpPw', 'Recovery password (8 numbers). Leave it empty the very first time.', 'password', NUM) +
+        '<button class="btn big" id="gpBtn">Get my PIN</button><button class="btn alt" id="gtBack">Back</button><p class="note">Forgot the recovery password? Call or visit the Catholic Education Unit office: they can tell you.</p>';
+    } else if (view === 'setpin') {
+      s += '<h2>Choose your own PIN</h2><p class="note">' + h(session.school.name) + '. Choose a PIN of 4 to 8 numbers that only you know.</p>' + fld('spPin1', 'New PIN', 'password', NUM) + fld('spPin2', 'Type it again', 'password', NUM) + '<button class="btn big" id="spBtn">Save my PIN</button>';
+    } else if (view === 'setpw') {
+      s += '<h2>Set your recovery password</h2><div class="msg warn"><b>Keep this password safe.</b> Write it down and keep it where you will find it. You need it to get a new PIN if you forget yours. If you forget this password too, call or visit the Unit office.</div>' +
+        fld('pwA', 'Recovery password: exactly 8 numbers', 'password', NUM) + fld('pwB', 'Type it again', 'password', NUM) + '<button class="btn big" id="pwBtn">Save the password</button>';
+    } else if (view === 'change') {
+      s += '<h2>Change PIN</h2><p class="note">' + h(session.school.name) + '</p>' + fld('cpOld', 'Your PIN now', 'password', NUM) + fld('cpNew1', 'New PIN (4 to 8 numbers)', 'password', NUM) + fld('cpNew2', 'Type it again', 'password', NUM) +
+        '<button class="btn big" id="cpBtn">Change PIN</button><button class="btn alt" id="cpBack">Back</button>';
+    }
+    $('gate').innerHTML = s + '<div id="gtMsg"></div></div>';
+    if (msg) gmsg(msg[0], msg[1]);
+    if (pick && $('gtSchool')) $('gtSchool').value = pick;
+    bind('gtReg', function () { renderGate('register'); });
+    bind('gtBack', function () { renderGate('login'); });
+    bind('gtGet', function () { renderGate('get'); });
+    bind('gtLogin', login); bind('rgBtn', register); bind('gpBtn', getPin); bind('spBtn', setPin); bind('pwBtn', setPw); bind('cpBtn', changePin);
+    bind('cpBack', function () { go('school'); });
+  }
+  function register() {
+    var r = { id: rid(), name: clip(val('rgName')), district: clip(val('rgDist')), location: clip(val('rgLoc')), emis: clip(val('rgEmis')), head: clip(val('rgHead')), phone: ghPhone(val('rgPhone')), at: new Date().toISOString(), salt: rid() };
+    if (!r.name || !r.district) return gmsg('Type the school name and the district.');
+    if (!phoneOk(r.phone)) return gmsg('Type the head teacher\'s phone: 10 numbers, like 0244123456.');
+    if (findReg(r.name, r.phone)) return gmsg('This school is already registered on this phone. Log in, or tap Get a PIN.');
+    saveReg(r);
+    renderGate('login', ['Registered ✔ Now tap <b>Get a PIN</b>.', 'ok'], r.id);
+  }
+  function getPin() {
+    var e = slow(); if (e) return gmsg(e);
+    var r = findReg(val('gpName'), val('gpPhone'));
+    if (!r) { wrong(); return gmsg('No school is registered on this phone with that name and phone number. Check them, or register first.'); }
+    if (r.pwHash) {
+      if (!val('gpPw')) return gmsg('Type your 8-number recovery password.');
+      if (pwHash(r.salt, 'rp:' + val('gpPw')) !== r.pwHash) { wrong(); return gmsg('The recovery password is not right. If you forgot it, call or visit the Unit office.'); }
+    }
+    tries.n = 0;
+    var pin = newPin(); r.pinHash = pwHash(r.salt, 'pin:' + pin); r.pinTemp = true; saveReg(r);
+    renderGate('login', ['Your PIN is <span class="codebig">' + pin + '</span><br>Log in with it now. You will then choose your own PIN.', 'ok'], r.id);
+  }
+  function login() {
+    var e = slow(); if (e) return gmsg(e);
+    var r = regs().filter(function (q) { return q.id === $('gtSchool').value; })[0];
+    if (!r) return;
+    if (!r.pinHash) return gmsg('This school has no PIN yet. Tap Get a PIN.');
+    if (pwHash(r.salt, 'pin:' + val('gtPin')) !== r.pinHash) { wrong(); return gmsg('Wrong PIN. Forgot it? Tap Get a PIN.'); }
+    tries.n = 0; session.school = r;
+    if (r.pinTemp) return renderGate('setpin');
+    if (!r.pwHash) return renderGate('setpw');
+    go('school');
+  }
+  function newPinOk(a, b) {
+    if (!/^\d{4,8}$/.test(a)) { gmsg('The PIN must be 4 to 8 numbers.'); return false; }
+    if (a !== b) { gmsg('The two PINs are not the same.'); return false; }
+    return true;
+  }
+  function setPin() {
+    var r = session.school, a = val('spPin1');
+    if (!newPinOk(a, val('spPin2'))) return;
+    r.pinHash = pwHash(r.salt, 'pin:' + a); r.pinTemp = false; saveReg(r);
+    if (!r.pwHash) renderGate('setpw', ['Your PIN is saved ✔', 'ok']); else go('school');
+  }
+  function setPw() {
+    var r = session.school, a = val('pwA');
+    if (!/^\d{8}$/.test(a)) return gmsg('The recovery password must be exactly 8 numbers.');
+    if (a !== val('pwB')) return gmsg('The two passwords are not the same.');
+    r.pwHash = pwHash(r.salt, 'rp:' + a); r.rpw = scramble(a); saveReg(r);
+    go('school');
+  }
+  function changePin() {
+    var r = session.school;
+    if (pwHash(r.salt, 'pin:' + val('cpOld')) !== r.pinHash) { wrong(); return gmsg('Your PIN now is not right.'); }
+    if (!newPinOk(val('cpNew1'), val('cpNew2'))) return;
+    r.pinHash = pwHash(r.salt, 'pin:' + val('cpNew1')); saveReg(r);
+    go('school'); $('schoolTop').insertAdjacentHTML('beforeend', '<div class="msg ok">Your PIN is changed ✔</div>');
+  }
+  function logout() { session.school = null; draft = null; go('gate'); }
+
+  /* ---------- the office password ---------- */
+  var unlocked = false;
+  function renderLock() {
+    var pw = sget('ceu_pw'), s = '<div class="card">';
+    if (!pw) {
+      s += '<h2>Set the office password</h2><p class="note">Only people who know it can open the statistics, the list of schools and their recovery passwords. Use at least 6 letters or numbers. Write it down and keep it safe: it cannot be shown again.</p>';
+      s += '<label class="f">New password<input id="lkPw1" type="password" autocomplete="new-password"></label><label class="f">Type it again<input id="lkPw2" type="password" autocomplete="new-password"></label>';
+      s += '<button class="btn big" id="lkBtn">Save the password</button><div id="lkMsg"></div>';
+    } else {
+      s += '<h2>Unit office</h2><p class="note">For the Catholic Education Unit office only.</p><label class="f">Office password<input id="lkPw" type="password" autocomplete="current-password"></label>';
+      s += '<button class="btn big" id="lkBtn">Open</button><div id="lkMsg"></div>';
+      s += '<details><summary>Forgot the password?</summary><p class="note">The password cannot be shown. You can remove all the office data on this device and start again with a new password. Your last backup file brings the schools and their data back.</p><button class="btn bad" id="lkForgot">Remove all office data and start again</button></details>';
+    }
+    $('ofLock').innerHTML = s + '</div>';
+    $('lkBtn').onclick = pw ? unlock : setPassword;
+    var f = $(pw ? 'lkPw' : 'lkPw2'); f.onkeydown = function (e) { if (e.keyCode === 13) $('lkBtn').click(); };
+    if (pw) $('lkForgot').onclick = function () {
+      if (!confirm('Remove ALL office data on this device (schools, passwords, data)? Only do this if you have a backup file or want to start again.')) return;
+      ['ceu_office', 'ceu_schools', 'ceu_expected', 'ceu_pw'].forEach(sdel); renderLock();
+    };
+  }
+  function setPassword() {
+    var a = $('lkPw1').value, b = $('lkPw2').value;
+    if (a.length < 6) { $('lkMsg').innerHTML = '<div class="msg bad">Use at least 6 letters or numbers.</div>'; return; }
+    if (a !== b) { $('lkMsg').innerHTML = '<div class="msg bad">The two passwords are not the same.</div>'; return; }
+    var salt = rid(); sset('ceu_pw', { salt: salt, hash: pwHash(salt, a) });
+    unlocked = true; go('office');
+  }
+  function unlock() {
+    var pw = sget('ceu_pw'), now = Date.now();
+    if (now < tries.until) { $('lkMsg').innerHTML = '<div class="msg bad">Too many wrong tries. Wait ' + Math.ceil((tries.until - now) / 1000) + ' seconds.</div>'; return; }
+    if (pwHash(pw.salt, $('lkPw').value) !== pw.hash) {
+      if (++tries.n >= 5) { tries.n = 0; tries.until = now + 30000; }
+      $('lkMsg').innerHTML = '<div class="msg bad">Wrong password.</div>'; return;
+    }
+    tries.n = 0; unlocked = true; go('office');
+  }
+  function lock() { unlocked = false; flt.sch = ''; go('office'); }
+
+  /* ---------- checking the numbers (used by the school form and the office) ---------- */
+  function totals(d) {
+    var t = { b: 0, g: 0 };
+    CLS.forEach(function (c) { t.b += n(d, 'e_' + c[0] + '_b'); t.g += n(d, 'e_' + c[0] + '_g'); });
+    t.p = t.b + t.g; t.teach = n(d, 't_m') + n(d, 't_f'); t.trained = n(d, 'tr_m') + n(d, 'tr_f');
+    t.qual = 0; QUAL.forEach(function (k) { t.qual += n(d, k); });
+    t.bands = 0; XB.forEach(function (k) { t.bands += n(d, k); });
+    return t;
+  }
+  function examFilled(d) {
+    for (var k in d) if (/^(x_|c_)/.test(k) && d[k] !== '' && d[k] != null) return true;
+    return false;
+  }
+  function validate(d) {
+    var E = [], W = [];
+    function err(m, ks) { E.push({ m: m, k: ks || [] }); }
+    function warn(m, ks) { W.push({ m: m, k: ks || [] }); }
+    var lv = { KG: !!d.lvKG, P: !!d.lvP, J: !!d.lvJ }, t = totals(d);
+    if (!d.collection) err('Type the collection name the Unit office gave you.', ['collection']);
+    if (!d.name) err('Type the school name.', ['name']);
+    if (!d.district) err('Type the district.', ['district']);
+    if (!lv.KG && !lv.P && !lv.J) err('Tick the levels the school has (KG, Primary, JHS).', ['lvKG', 'lvP', 'lvJ']);
+    var bad = [];
+    for (var k in d) if (typeof d[k] === 'number' && k !== 'x_mean' && (!isFinite(d[k]) || d[k] < 0 || Math.floor(d[k]) !== d[k])) bad.push(k);
+    if (bad.length) err('Use whole numbers (0 or more) in: ' + names(bad) + '.', bad);
+    var miss = [];
+    CLS.forEach(function (c) { if (lv[c[2]]) ['b', 'g'].forEach(function (s) { if (!has(d, 'e_' + c[0] + '_' + s)) miss.push('e_' + c[0] + '_' + s); }); });
+    OTHER.concat(STAFF, FACN).forEach(function (k) { if (!has(d, k)) miss.push(k); });
+    FACY.forEach(function (k) { if (!d[k]) miss.push(k); });
+    if (miss.length) err('Some boxes are empty. Type 0 where there are none. (' + miss.length + ' empty: ' + names(miss.slice(0, 5)) + (miss.length > 5 ? ' …' : '') + ')', miss);
+    if (n(d, 'adm_b') > t.b) err('New admissions (boys) are more than all the boys in the school.', ['adm_b']);
+    if (n(d, 'adm_g') > t.g) err('New admissions (girls) are more than all the girls in the school.', ['adm_g']);
+    if (n(d, 'sen_b') > t.b) err('Special needs (boys) are more than all the boys in the school.', ['sen_b']);
+    if (n(d, 'sen_g') > t.g) err('Special needs (girls) are more than all the girls in the school.', ['sen_g']);
+    if (n(d, 'tr_m') > n(d, 't_m')) err('Trained male teachers are more than all male teachers.', ['tr_m', 't_m']);
+    if (n(d, 'tr_f') > n(d, 't_f')) err('Trained female teachers are more than all female teachers.', ['tr_f', 't_f']);
+    if (QUAL.every(function (k) { return has(d, k); }) && t.qual !== t.teach) err('The qualifications add up to ' + t.qual + ' but there are ' + t.teach + ' teachers. They must be equal.', QUAL);
+    if (n(d, 'f_clsg') > n(d, 'f_cls')) err('Classrooms in good condition are more than all classrooms.', ['f_clsg']);
+    if (n(d, 'f_toiw') > n(d, 'f_toi')) err('Working toilets are more than all toilets.', ['f_toiw']);
+    if (n(d, 'f_compw') > n(d, 'f_comp')) err('Working computers are more than all computers.', ['f_compw']);
+    if (lv.J && examFilled(d)) {
+      if (!d.x_name) err('Type the exam name, e.g. BECE 2026 or Mock 2.', ['x_name']);
+      var xm = ['x_reg', 'x_sat'].concat(XB).filter(function (k) { return !has(d, k); });
+      if (xm.length) err('Fill every exam box (type 0 where none): ' + names(xm) + '.', xm);
+      var sat = n(d, 'x_sat');
+      if (sat > n(d, 'x_reg')) err('More candidates sat than were registered.', ['x_sat', 'x_reg']);
+      if (!xm.length && t.bands !== sat) err('The aggregate groups add up to ' + t.bands + ' but ' + sat + ' candidates sat. They must be equal.', XB);
+      SUBJ.forEach(function (s) { if (n(d, 'c_' + s[0]) > sat) err(s[1] + ': more candidates with grades 1–6 than candidates who sat.', ['c_' + s[0]]); });
+      if (has(d, 'x_mean') && (d.x_mean < 6 || d.x_mean > 54)) err('The mean aggregate must be between 6 and 54.', ['x_mean']);
+      else if (has(d, 'x_mean') && sat > 0 && t.bands === sat) {
+        var est = 0; XB.forEach(function (k, i) { est += n(d, k) * MID[i]; }); est = est / sat;
+        if (Math.abs(est - d.x_mean) > 6) warn('The mean aggregate (' + d.x_mean + ') does not match the aggregate groups (about ' + fmt(est, 1) + ').', ['x_mean']);
+      }
+    }
+    /* things that are possible but unusual: shown so they can be checked */
+    if (t.p > 0 && t.teach === 0 && has(d, 't_m') && has(d, 't_f')) warn('There are pupils but no teachers.', ['t_m', 't_f']);
+    if (t.teach > 0 && t.p / t.teach > 45) warn('About ' + Math.round(t.p / t.teach) + ' pupils per teacher. Is that right?', ['t_m', 't_f']);
+    if (t.teach > 0 && t.p === 0 && !miss.length) warn('There are teachers but no pupils.', []);
+    if (has(d, 'f_cls') && d.f_cls > 0 && t.p / d.f_cls > 50) warn('About ' + Math.round(t.p / d.f_cls) + ' pupils per classroom. Is that right?', ['f_cls']);
+    if (has(d, 'f_cls') && d.f_cls === 0 && t.p > 0) warn('No classrooms. Is that right?', ['f_cls']);
+    if (has(d, 'f_seat') && t.p > 0 && d.f_seat < t.p) warn('Seats (' + d.f_seat + ') are fewer than pupils (' + t.p + ').', ['f_seat']);
+    if (has(d, 'f_toiw') && t.p > 0 && d.f_toiw === 0) warn('No working toilets. Is that right?', ['f_toiw']);
+    if (t.teach > 0 && t.trained / t.teach < 0.5) warn('Fewer than half the teachers are trained. Is that right?', ['tr_m', 'tr_f']);
+    if (t.p > 0 && (n(d, 'drop_b') + n(d, 'drop_g')) > 0.1 * t.p) warn('Many dropouts: more than 1 in 10 pupils.', ['drop_b', 'drop_g']);
+    CLS.forEach(function (c) {
+      if (!lv[c[2]]) return;
+      var kb = 'e_' + c[0] + '_b', kg = 'e_' + c[0] + '_g';
+      if (has(d, kb) && has(d, kg) && d[kb] + d[kg] === 0) warn('No pupils in ' + c[1] + '. Is that right?', [kb, kg]);
+      [kb, kg].forEach(function (k) { if (n(d, k) > 150) warn(LABEL[k] + ': ' + d[k] + ' is a very large number. Check it.', [k]); });
+    });
+    return { errors: E, warnings: W };
+  }
+  /* only what belongs to the levels the school has */
+  function clean(raw) {
+    var d = {}, k;
+    for (k in raw) d[k] = raw[k];
+    CLS.forEach(function (c) { if (!d['lv' + c[2]]) { delete d['e_' + c[0] + '_b']; delete d['e_' + c[0] + '_g']; } });
+    if (!d.lvJ || !examFilled(d)) for (k in d) if (/^(x_|c_)/.test(k)) delete d[k];
+    return d;
+  }
+
+  /* ---------- the school form ---------- */
+  var draft = null;
+  function numIn(k, dec) { return '<input data-k="' + k + '" type="number" inputmode="' + (dec ? 'decimal' : 'numeric') + '" min="0" step="' + (dec ? '0.1' : '1') + '" aria-label="' + h(LABEL[k]) + '">'; }
+  function txt(k, ph, type) { return '<label class="f">' + h(LABEL[k]) + '<input data-k="' + k + '" type="' + (type || 'text') + '"' + (ph ? ' placeholder="' + h(ph) + '"' : '') + '></label>'; }
+  function yn(k) { return '<label class="f">' + h(LABEL[k]) + '<select data-k="' + k + '"><option value="">Choose…</option><option>Yes</option><option>No</option></select></label>'; }
+  function numRow(k, lbl) { return '<tr><td>' + h(lbl || LABEL[k]) + '</td><td style="width:110px">' + numIn(k) + '</td></tr>'; }
+  function buildForm() {
+    var s = '';
+    s += '<div class="card"><h2>Collection</h2><p class="note">The Unit office tells you this name, for example <b>2026/27 Term 1 census</b>. Type it exactly.</p>' + txt('collection', 'e.g. 2026/27 Term 1 census') + '</div>';
+    s += '<div class="card"><h2>1. The school</h2><div class="two">' + txt('name', 'e.g. St. Mary R/C Basic School') + txt('emis', 'If you know it') + txt('district') + txt('circuit') + txt('parish') + txt('head') + txt('phone', '', 'tel') + txt('filledBy', 'Name and position') + '</div>';
+    s += '<div class="note" style="margin:0 0 4px">Levels the school has:</div><div class="checks">';
+    LEVELS.forEach(function (l) { s += '<label><input type="checkbox" data-k="' + l[2] + '"> ' + l[1] + '</label>'; });
+    s += '</div></div>';
+    s += '<div class="card"><h2>2. Pupils (enrolment)</h2><p class="note">Pupils on roll now. Type 0 where there are none. Totals are added for you.</p><div class="wrap"><table class="grid"><tr><th>Class</th><th class="r">Boys</th><th class="r">Girls</th><th class="r">Total</th></tr>';
+    CLS.forEach(function (c) { s += '<tr data-lv="' + c[2] + '"><td>' + c[1] + '</td><td>' + numIn('e_' + c[0] + '_b') + '</td><td>' + numIn('e_' + c[0] + '_g') + '</td><td class="tot" id="tot_' + c[0] + '">0</td></tr>'; });
+    s += '<tr class="sum"><td style="text-align:left">All pupils</td><td id="totB">0</td><td id="totG">0</td><td id="totP">0</td></tr></table></div>';
+    s += '<p class="note hide" id="noLevels">Tick the levels in part 1 to see the classes.</p>';
+    s += '<h3>This school year</h3><div class="wrap"><table class="grid"><tr><th></th><th class="r">Boys</th><th class="r">Girls</th></tr>';
+    s += '<tr><td>New admissions</td><td>' + numIn('adm_b') + '</td><td>' + numIn('adm_g') + '</td></tr>';
+    s += '<tr><td>Dropouts (left school)</td><td>' + numIn('drop_b') + '</td><td>' + numIn('drop_g') + '</td></tr>';
+    s += '<tr><td>Pupils with special needs</td><td>' + numIn('sen_b') + '</td><td>' + numIn('sen_g') + '</td></tr></table></div></div>';
+    s += '<div class="card"><h2>3. Teachers and staff</h2><div class="wrap"><table class="grid"><tr><th></th><th class="r">Male</th><th class="r">Female</th><th class="r">Total</th></tr>';
+    s += '<tr><td>All teachers</td><td>' + numIn('t_m') + '</td><td>' + numIn('t_f') + '</td><td class="tot" id="totT">0</td></tr>';
+    s += '<tr><td>Trained teachers</td><td>' + numIn('tr_m') + '</td><td>' + numIn('tr_f') + '</td><td class="tot" id="totTr">0</td></tr>';
+    s += '<tr><td>Non-teaching staff</td><td>' + numIn('nt_m') + '</td><td>' + numIn('nt_f') + '</td><td class="tot" id="totNt">0</td></tr></table></div>';
+    s += '<h3>Highest qualification of the teachers</h3><p class="note">Each teacher counted once. These must add up to all teachers.</p><table class="grid">';
+    s += numRow('q_deg', 'Degree') + numRow('q_dip', 'Diploma') + numRow('q_cert', 'Cert A') + numRow('q_oth', 'Other / none') + '</table><p class="live" id="qualLive"></p>';
+    s += '<table class="grid">' + numRow('vac', 'Teachers still needed (vacancies)') + '</table></div>';
+    s += '<div class="card" id="examCard"><h2>4. Exam results (JHS)</h2><p class="note">Results of the last BECE or a mock. Leave this part empty if there are no results to send.</p>';
+    s += txt('x_name', 'e.g. BECE 2026 or Mock 2');
+    s += '<table class="grid">' + numRow('x_reg') + numRow('x_sat') + '</table>';
+    s += '<h3>Candidates by aggregate</h3><table class="grid"><tr><th>Aggregate</th><th class="r">Candidates</th></tr>';
+    XB.forEach(function (k, i) { s += '<tr><td>' + BANDS[i] +  + '</td><td style="width:110px">' + numIn(k) + '</td></tr>'; });
+    s += '</table><p class="live" id="bandLive"></p>';
+    s += '<table class="grid"><tr><td>Mean (average) aggregate, if you know it</td><td style="width:110px">' + numIn('x_mean', true) + '</td></tr></table>';
+    s += '<h3>Candidates with grades 1–6 in each subject</h3><p class="note">Leave a subject empty if the school did not take it.</p><table class="grid">';
+    SUBJ.forEach(function (x) { s += numRow('c_' + x[0], x[1]); });
+    s += '</table></div>';
+    s += '<div class="card"><h2>5. Facilities</h2><table class="grid">';
+    s += numRow('f_cls', 'Classrooms') + numRow('f_clsg', '…of these, in good condition') + numRow('f_seat', 'Seats for pupils (sitting places)') + numRow('f_toi', 'Toilets / latrines') + numRow('f_toiw', '…of these, working') + numRow('f_comp', 'Computers') + numRow('f_compw', '…of these, working') + numRow('f_book', 'Core textbooks (all subjects)');
+    s += '</table><div class="two" style="margin-top:10px">' + yn('f_water') + yn('f_elec') + yn('f_lib') + '</div></div>';
+    $('schoolForm').innerHTML = s;
+  }
+  function collect() {
+    var d = {}, els = $('schoolForm').querySelectorAll('[data-k]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], k = el.getAttribute('data-k');
+      if (el.type === 'checkbox') { if (el.checked) d[k] = true; }
+      else if (el.type === 'number') { if (el.value !== '') { var v = Number(el.value); if (isFinite(v)) d[k] = v; } }
+      else { var t = String(el.value || '').replace(/\s+/g, ' ').trim(); if (t) d[k] = t; }
+    }
+    return d;
+  }
+  function fill(d) {
+    var els = $('schoolForm').querySelectorAll('[data-k]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], k = el.getAttribute('data-k');
+      if (el.type === 'checkbox') el.checked = !!d[k]; else el.value = d[k] == null ? '' : d[k];
+    }
+  }
+  function live() {
+    var d = collect(), t = totals(d), anyLv = false;
+    CLS.forEach(function (c) { $('tot_' + c[0]).textContent = fmt(n(d, 'e_' + c[0] + '_b') + n(d, 'e_' + c[0] + '_g')); });
+    $('totB').textContent = fmt(t.b); $('totG').textContent = fmt(t.g); $('totP').textContent = fmt(t.p);
+    $('totT').textContent = fmt(t.teach); $('totTr').textContent = fmt(t.trained); $('totNt').textContent = fmt(n(d, 'nt_m') + n(d, 'nt_f'));
+    var rows = $('schoolForm').querySelectorAll('tr[data-lv]');
+    for (var i = 0; i < rows.length; i++) { var on = !!d['lv' + rows[i].getAttribute('data-lv')]; anyLv = anyLv || on; rows[i].className = on ? '' : 'hide'; }
+    $('noLevels').className = anyLv ? 'note hide' : 'note';
+    $('examCard').className = d.lvJ ? 'card' : 'card hide';
+    var ql = $('qualLive');
+    ql.textContent = 'These add up to ' + t.qual + ' of ' + t.teach + ' teachers.' + (t.qual === t.teach ? ' ✔' : '');
+    ql.className = 'live ' + (t.qual === t.teach ? 'ok' : 'bad');
+    var bl = $('bandLive'), sat = n(d, 'x_sat');
+    bl.textContent = 'These add up to ' + t.bands + ' of ' + sat + ' who sat.' + (t.bands === sat ? ' ✔' : '');
+    bl.className = 'live ' + (t.bands === sat ? 'ok' : 'bad');
+    return d;
+  }
+  function saveDraft() {
+    var d = live();
+    if (!draft) draft = { id: rid() };
+    draft.d = d; draft.at = new Date().toISOString();
+    $('draftState').textContent = sset(draftKey(), draft) ? 'Kept on this device ✔' : 'Not kept: this browser cannot store';
+  }
+  function marks(list, cls) {
+    list.forEach(function (p) { p.k.forEach(function (k) { var el = $('schoolForm').querySelector('[data-k="' + k + '"]'); if (el && el.className.indexOf('e') < 0) el.className = cls; }); });
+  }
+  function clearMarks() { var els = $('schoolForm').querySelectorAll('.e,.w'); for (var i = 0; i < els.length; i++) els[i].className = ''; }
+  function finish(force) {
+    var raw = collect(), d = clean(raw), box = $('chk');
+    var sc = session.school;
+    d.name = sc.name; d.district = sc.district; d.phone = sc.phone; d.regId = sc.id;
+    if (sc.emis) d.emis = sc.emis; else delete d.emis;
+    if (sc.location) d.location = sc.location;
+    if (sc.rpw) d.rpw = sc.rpw;
+    var r = validate(d);
+    clearMarks();
+    if (r.errors.length) {
+      marks(r.errors, 'e');
+      box.innerHTML = '<div class="msg bad"><b>Please correct these first:</b><ul>' + r.errors.map(function (x) { return '<li>' + h(x.m) + '</li>'; }).join('') + '</ul><div style="margin-top:6px">The boxes are marked in red.</div></div>';
+      box.scrollIntoView(); return;
+    }
+    if (r.warnings.length && !force) {
+      marks(r.warnings, 'w');
+      box.innerHTML = '<div class="msg warn"><b>Please check these. They look unusual:</b><ul>' + r.warnings.map(function (x) { return '<li>' + h(x.m) + '</li>'; }).join('') + '</ul><div style="margin-top:8px">If they are correct, finish anyway.</div><button class="btn" onclick="CEU.finish(true)">They are correct – finish</button></div>';
+      box.scrollIntoView(); return;
+    }
+    box.innerHTML = '';
+    if (!draft) draft = { id: rid() };
+    var rec = { app: 'CEU-DATA', v: 1, id: draft.id, savedAt: new Date().toISOString(), d: d };
+    rec.sum = sumOf(rec);
+    sset('ceu_lastCollection', d.collection);
+    draft.done = rec; sset(draftKey(), draft);
+    showSend(rec);
+  }
+  function codeOf(rec) { return 'CEU1:' + b64(JSON.stringify(rec)); }
+  function fileOf(rec) { return 'CEU_' + fileSafe(rec.d.collection) + '_' + fileSafe(rec.d.name) + '_' + rec.savedAt.slice(0, 10) + '.json'; }
+  function showSend(rec) {
+    var t = totals(rec.d), canShare = false, file = null;
+    try { file = new File([JSON.stringify(rec)], fileOf(rec), { type: 'application/json' }); canShare = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+    var s = '<div class="card"><h2>✔ Finished. Now send it to the Unit office.</h2>';
+    s += '<p><b>' + h(rec.d.name) + '</b><br>' + h(rec.d.collection) + '<br>' + fmt(t.p) + ' pupils · ' + fmt(t.teach) + ' teachers</p>';
+    s += '<p class="note">Choose one way. Sending needs a signal only for the moment you send.</p>';
+    if (canShare) s += '<button class="btn big" id="sdShare">📤 Share the file (WhatsApp, email…)</button>';
+    s += '<button class="btn big' + (canShare ? ' alt' : '') + '" id="sdFile">💾 Save as a file</button><p class="note">Then send the file by WhatsApp, email or flash drive. It is in your Downloads.</p>';
+    s += '<a class="btn big alt" id="sdWa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('CEU school data: ' + rec.d.name + ' – ' + rec.d.collection + '\n' + codeOf(rec)) + '">💬 Send as a WhatsApp message</a>';
+    s += '<button class="btn big alt" id="sdCopy">📋 Copy as text</button><div id="sdMsg"></div>';
+    s += '<details><summary>Show the text</summary><textarea class="code" readonly id="sdCode">' + h(codeOf(rec)) + '</textarea></details>';
+    s += '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">';
+    s += '<button class="btn alt" id="sdOffice">Add to the statistics on this device</button><button class="btn alt" onclick="CEU.edit()">Change something</button><button class="btn bad" onclick="CEU.newForm()">Start a new form</button></div>';
+    $('sendBox').innerHTML = s; $('sendBox').className = ''; $('formArea').className = 'hide'; $('schoolBar').className = 'bar hide';
+    window.scrollTo(0, 0);
+    if (canShare) $('sdShare').onclick = function () { navigator.share({ files: [file], title: 'CEU school data', text: rec.d.name }).catch(function () {}); };
+    $('sdFile').onclick = function () { download(fileOf(rec), JSON.stringify(rec), 'application/json'); $('sdMsg').innerHTML = '<div class="msg ok">Saved: ' + h(fileOf(rec)) + '</div>'; };
+    $('sdCopy').onclick = function () { copyText(codeOf(rec), function (ok) { $('sdMsg').innerHTML = ok ? '<div class="msg ok">Copied. Paste it in WhatsApp or an email to the Unit office.</div>' : '<div class="msg warn">Could not copy. Open "Show the text", hold on it and copy.</div>'; }); };
+    $('sdOffice').onclick = function () { var r = addRecords([rec]); $('sdMsg').innerHTML = '<div class="msg ok">' + h(r.text) + ' Open "Unit office" on the Home page to see the statistics.</div>'; };
+  }
+  function openSchool() {
+    draft = sget(draftKey());
+    if (!$('schoolForm').firstChild) {
+      buildForm();
+      $('schoolForm').addEventListener('input', saveDraft);
+      $('schoolForm').addEventListener('change', saveDraft);
+    }
+    var last = sget('ceu_lastCollection');
+    if (draft && draft.d) fill(draft.d); else { fill({}); if (last) fill({ collection: last }); }
+    fixSchool();
+    var sc = session.school;
+    $('schoolTop').innerHTML = '<div class="card noprint" style="padding:10px 14px"><b>' + h(sc.name) + '</b> <span class="note">' + h(sc.district) + '</span><br><button class="btn sm alt" onclick="CEU.go(\'gate\',\'change\')">Change PIN</button><button class="btn sm alt" onclick="CEU.logout()">Log out</button></div>';
+    live();
+    if (draft && draft.done) showSend(draft.done); else edit();
+  }
+  /* the registered school's details are filled in and cannot be changed in the form */
+  function fixSchool() {
+    var sc = session.school, fix = { name: sc.name, district: sc.district, emis: sc.emis, phone: sc.phone };
+    var all = $('schoolForm').querySelectorAll('[data-k]');
+    for (var i = 0; i < all.length; i++) if (all[i].readOnly) { all[i].readOnly = false; all[i].style.background = ''; }
+    for (var k in fix) { var el = $('schoolForm').querySelector('[data-k="' + k + '"]'); if (el) { el.value = fix[k] || ''; if (fix[k]) { el.readOnly = true; el.style.background = '#eef1f7'; } } }
+    var hd = $('schoolForm').querySelector('[data-k="head"]');
+    if (hd && !hd.value && sc.head) hd.value = sc.head;
+  }
+  function edit() {
+    $('sendBox').className = 'hide'; $('formArea').className = ''; $('schoolBar').className = 'bar'; $('chk').innerHTML = '';
+    if (draft) { draft.done = null; sset(draftKey(), draft); }
+  }
+  function newForm() {
+    if (!confirm('Start a new, empty form? The finished one has been kept only if you sent or saved it.')) return;
+    var d = collect();
+    if (d.collection) sset('ceu_lastCollection', d.collection);
+    draft = null; sdel(draftKey());
+    fill(d.collection ? { collection: d.collection } : {}); fixSchool(); live(); edit(); window.scrollTo(0, 0);
+  }
+
+  /* ---------- the Unit office ---------- */
+  function recs() { return sget('ceu_office') || []; }
+  function keyOf(r, list) {
+    var o = matchOf(r, list);
+    return norm(r.d.collection) + '|' + (o ? 'o' + o.id : r.d.emis ? 'e' + norm(r.d.emis) : 'n' + norm(r.d.name) + '|' + norm(r.d.district));
+  }
+  function approved(r, list) { var o = matchOf(r, list); return !!(o && o.phone && ghPhone(o.phone) === ghPhone(r.d.phone)); }
+  function pendKey(r) { return norm(r.d.collection) + '|' + nameKey(r.d.name) + '|' + ghPhone(r.d.phone); }
+  /* trusted (true, or a list): forms from the office's own backup file. Otherwise a form is taken by itself only when the
+     school name and phone match the list; the rest wait for the office to accept or refuse */
+  function addRecords(list, trusted) {
+    var all = recs(), idx = {}, res = { added: 0, replaced: 0, older: 0, changed: 0, wrong: 0, same: 0, pending: 0 }, schools = ours(), pend = sget('ceu_pending') || [], listChanged = false;
+    all.forEach(function (r, i) { idx[keyOf(r, schools)] = i; });
+    list.forEach(function (r) {
+      if (!r || r.app !== 'CEU-DATA' || !r.d || typeof r.d !== 'object' || !r.savedAt || !r.id) { res.wrong++; return; }
+      if (r.sum !== sumOf(r)) { res.changed++; return; }
+      if (trusted !== true && (!trusted || trusted.indexOf(r) < 0) && !approved(r, schools)) {
+        var pk = pendKey(r), at = -1;
+        pend.forEach(function (q, i) { if (pendKey(q) === pk) at = i; });
+        if (at < 0) pend.push(r); else if (pend[at].savedAt < r.savedAt) pend[at] = r;
+        res.pending++; return;
+      }
+      var o = matchOf(r, schools);
+      if (o && r.d.rpw && !(o.rpwAt && o.rpwAt > r.savedAt)) { o.rpw = r.d.rpw; o.rpwAt = r.savedAt; listChanged = true; }
+      var k = keyOf(r, schools);
+      if (idx[k] == null) { idx[k] = all.length; all.push(r); res.added++; }
+      else if (all[idx[k]].savedAt === r.savedAt && all[idx[k]].sum === r.sum) res.same++;
+      else if (all[idx[k]].savedAt < r.savedAt) { all[idx[k]] = r; res.replaced++; }
+      else res.older++;
+    });
+    sset('ceu_office', all); sset('ceu_pending', pend);
+    if (listChanged) sset('ceu_schools', schools);
+    var p = [];
+    if (res.added) p.push(res.added + ' school' + (res.added > 1 ? 's' : '') + ' added.');
+    if (res.replaced) p.push(res.replaced + ' replaced by a newer copy.');
+    if (res.same) p.push(res.same + ' already loaded.');
+    if (res.older) p.push(res.older + ' not used: a newer copy is already loaded.');
+    if (res.changed) p.push(res.changed + ' refused: the data was changed after the school saved it. Ask the school to send it again.');
+    if (res.wrong) p.push(res.wrong + ' refused: not CEU school data.');
+    if (res.pending) p.push(res.pending + ' waiting for you: the school name and phone do not match your list. See "New schools waiting" below.');
+    res.text = p.join(' ') || 'Nothing found to add.';
+    return res;
+  }
+  function parseText(text) {
+    var out = [];
+    text = String(text || '').replace(/^﻿/, '');
+    try { var j = JSON.parse(text); return Object.prototype.toString.call(j) === '[object Array]' ? [{ app: 'CEU-BACKUP', recs: j }] : [j]; } catch (e) {}
+    var m = text.match(/CEU1:[A-Za-z0-9+\/=]+/g) || [];
+    m.forEach(function (c) { try { out.push(JSON.parse(unb64(c.slice(5)))); } catch (e) { out.push(null); } });
+    return out;
+  }
+  function addPasted() {
+    var r = importItems(parseText($('ofPaste').value));
+    if (r.added || r.replaced) $('ofPaste').value = '';
+    showMsg(r); renderOffice();
+  }
+  function showMsg(r) { $('ofMsg').innerHTML = '<div class="msg ' + (r.changed || r.wrong || r.pending ? 'warn' : 'ok') + '">' + h(r.text) + '</div>'; }
+  function readFiles(files) {
+    var list = [], left = files.length;
+    if (!left) return;
+    Array.prototype.forEach.call(files, function (f) {
+      var fr = new FileReader();
+      fr.onload = function () { list = list.concat(parseText(fr.result)); if (!--left) { showMsg(importItems(list)); renderOffice(); } };
+      fr.onerror = function () { list.push(null); if (!--left) { showMsg(importItems(list)); renderOffice(); } };
+      fr.readAsText(f);
+    });
+  }
+
+  function compute(list) {
+    var T = { n: list.length, b: 0, g: 0, cls: {}, lv: {}, s: {}, yes: {}, ex: {}, exList: [] };
+    CLS.forEach(function (c) { T.cls[c[0]] = { b: 0, g: 0 }; });
+    LEVELS.forEach(function (l) { T.lv[l[0]] = { b: 0, g: 0, n: 0 }; });
+    OTHER.concat(STAFF, FACN).forEach(function (k) { T.s[k] = 0; });
+    FACY.forEach(function (k) { T.yes[k] = 0; });
+    list.forEach(function (r) {
+      var d = r.d;
+      LEVELS.forEach(function (l) { if (d[l[2]]) T.lv[l[0]].n++; });
+      CLS.forEach(function (c) {
+        var b = n(d, 'e_' + c[0] + '_b'), g = n(d, 'e_' + c[0] + '_g');
+        T.cls[c[0]].b += b; T.cls[c[0]].g += g; T.lv[c[2]].b += b; T.lv[c[2]].g += g; T.b += b; T.g += g;
+      });
+      OTHER.concat(STAFF, FACN).forEach(function (k) { T.s[k] += n(d, k); });
+      FACY.forEach(function (k) { if (d[k] === 'Yes') T.yes[k]++; });
+      if (has(d, 'x_sat') && d.x_name) {
+        var ek = norm(d.x_name), E = T.ex[ek];
+        if (!E) { E = T.ex[ek] = { name: d.x_name, n: 0, reg: 0, sat: 0, bands: [0, 0, 0, 0, 0, 0, 0], meanW: 0, meanN: 0, cred: {}, schools: [] }; T.exList.push(E); }
+        var pass = 0;
+        E.n++; E.reg += n(d, 'x_reg'); E.sat += d.x_sat;
+        XB.forEach(function (k, i) { E.bands[i] += n(d, k); if (i < PASS_BANDS) pass += n(d, k); });
+        if (has(d, 'x_mean')) { E.meanW += d.x_mean * d.x_sat; E.meanN += d.x_sat; }
+        SUBJ.forEach(function (s) { if (has(d, 'c_' + s[0])) { var c = E.cred[s[0]] || (E.cred[s[0]] = { n: 0, c: 0, sat: 0 }); c.n++; c.c += d['c_' + s[0]]; c.sat += d.x_sat; } });
+        E.schools.push({ name: d.name, district: d.district, sat: d.x_sat, pass: pass, rate: d.x_sat ? pass / d.x_sat : null, mean: has(d, 'x_mean') ? d.x_mean : null });
+      }
+    });
+    var s = T.s;
+    T.p = T.b + T.g; T.teach = s.t_m + s.t_f; T.trained = s.tr_m + s.tr_f; T.nt = s.nt_m + s.nt_f;
+    T.ptr = T.teach ? T.p / T.teach : null; T.gpi = T.b ? T.g / T.b : null;
+    T.passAll = 0; T.satAll = 0;
+    T.exList.forEach(function (E) {
+      E.pass = 0; for (var i = 0; i < PASS_BANDS; i++) E.pass += E.bands[i];
+      E.rate = E.sat ? E.pass / E.sat : null; E.mean = E.meanN ? E.meanW / E.meanN : null;
+      T.passAll += E.pass; T.satAll += E.sat;
+    });
+    T.passRate = T.satAll ? T.passAll / T.satAll : null;
+    return T;
+  }
+  function tile(v, label) { return '<div class="tile"><b>' + v + '</b><span>' + h(label) + '</span></div>'; }
+  function tbl(head, rows, rightFrom) {
+    rightFrom = rightFrom == null ? 1 : rightFrom;
+    var s = '<div class="wrap"><table><tr>' + head.map(function (x, i) { return '<th' + (i >= rightFrom ? ' class="r"' : '') + '>' + x + '</th>'; }).join('') + '</tr>';
+    rows.forEach(function (r) { s += '<tr' + (r.sum ? ' style="font-weight:700"' : '') + '>' + r.map(function (x, i) { return '<td' + (i >= rightFrom ? ' class="r"' : '') + '>' + x + '</td>'; }).join('') + '</tr>'; });
+    return s + '</table></div>';
+  }
+  function bars(rows, colors, labels) {
+    var max = 0;
+    rows.forEach(function (r) { var t = 0; r.v.forEach(function (x) { t += x; }); if (t > max) max = t; });
+    var W = 600, lw = 90, rh = 24, H = rows.length * rh + 6, room = W - lw - 70, s = '';
+    rows.forEach(function (r, i) {
+      var y = 3 + i * rh, x = lw, t = 0;
+      s += '<text x="' + (lw - 6) + '" y="' + (y + 16) + '" text-anchor="end" font-size="13" fill="#5b6676">' + h(r.label) + '</text>';
+      r.v.forEach(function (v, j) { var w = max ? v / max * room : 0; s += '<rect x="' + x.toFixed(1) + '" y="' + (y + 3) + '" width="' + w.toFixed(1) + '" height="' + (rh - 7) + '" rx="2" fill="' + colors[j] + '"></rect>'; x += w; t += v; });
+      s += '<text x="' + (x + 5).toFixed(1) + '" y="' + (y + 16) + '" font-size="13" fill="#1c2430">' + fmt(t) + '</text>';
+    });
+    var lg = labels ? '<div class="legend">' + labels.map(function (l, j) { return '<i style="background:' + colors[j] + '"></i>' + h(l); }).join('') + '</div>' : '';
+    return lg + '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img">' + s + '</svg>';
+  }
+
+  /* ---------- the Unit's own list of schools, and who has sent ---------- */
+  function ours() { return sget('ceu_schools') || []; }
+  function clip(v) { return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, 120); }
+  function nameKey(v) { return String(v || '').toLowerCase().replace(/\bsaint\b/g, 'st').replace(/\bschools?\b/g, '').replace(/[^a-z0-9]+/g, ''); }
+  function ourKey(o) { return nameKey(o.name) + '|' + norm(o.district); }
+  function expected() { var e = sget('ceu_expected'); return typeof e === 'number' && e > 0 ? e : null; }
+  function addOurs(list) {
+    var all = ours(), seen = {}, res = { added: 0, dup: 0 };
+    all.forEach(function (o) { seen[ourKey(o)] = 1; });
+    list.forEach(function (o) {
+      if (!o || !clip(o.name)) return;
+      o = { id: o.id || rid(), name: clip(o.name), district: clip(o.district), location: clip(o.location), emis: clip(o.emis), phone: phoneOk(o.phone) ? ghPhone(o.phone) : clip(o.phone), alias: o.alias || [], rpw: o.rpw || '', rpwAt: o.rpwAt || '' };
+      var k = ourKey(o);
+      if (seen[k]) { res.dup++; return; }
+      seen[k] = 1; all.push(o); res.added++;
+    });
+    all.sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
+    sset('ceu_schools', all);
+    return res;
+  }
+  /* one school per line: name, district, town, EMIS (commas, or columns copied from Excel) */
+  function parseList(text) {
+    var out = [];
+    String(text || '').split(/\r?\n/).forEach(function (line, i) {
+      if (!line.trim()) return;
+      var p = line.indexOf('\t') >= 0 ? line.split('\t') : line.split(',');
+      if (i === 0 && /school/i.test(p[0]) && /district/i.test(p[1] || '')) return;     // a heading row
+      out.push({ name: p[0], district: p[1], location: p[2], emis: p[3], phone: p[4] });
+    });
+    return out;
+  }
+  function matchOf(r, list) {
+    var ek = norm(r.d.emis), nk = nameKey(r.d.name), i;
+    if (ek) for (i = 0; i < list.length; i++) if (list[i].emis && norm(list[i].emis) === ek) return list[i];
+    var same = list.filter(function (o) { return nameKey(o.name) === nk || (o.alias || []).indexOf(nk) >= 0; });
+    if (same.length > 1) same = same.filter(function (o) { return norm(o.district) === norm(r.d.district); });   // same name in two districts
+    return same.length === 1 ? same[0] : null;
+  }
+  function sentStatus(c) {
+    var list = ours(), dist = flt.dist, sentIds = {}, notOnList = [];
+    var scope = dist ? list.filter(function (o) { return norm(o.district) === dist; }) : list;
+    c.inCol.forEach(function (r) {
+      var o = matchOf(r, list);
+      if (o) sentIds[o.id] = r;
+      else if (!dist || norm(r.d.district) === dist) notOnList.push(r);
+    });
+    var sent = c.list.length, exp = dist ? scope.length : (expected() || list.length);
+    var missing = scope.filter(function (o) { return !sentIds[o.id]; });
+    return { list: list, scope: scope, missing: missing, notOnList: notOnList, sent: sent, exp: exp, notSent: Math.max(missing.length, exp - sent) };
+  }
+  function statusCard(c) {
+    var st = sentStatus(c), x = '<div class="card" id="ofStatus"><h2>Who has sent' + (flt.dist && c.dists[flt.dist] ? ' · ' + h(c.dists[flt.dist]) : '') + '</h2>';
+    if (st.exp) {
+      x += '<p class="big-n"><b>' + fmt(st.sent) + ' of ' + fmt(st.exp) + '</b> schools have sent their data. <b style="color:var(--bad)">' + fmt(st.notSent) + '</b> not yet.</p>';
+      x += '<div class="prog"><i style="width:' + Math.min(100, st.exp ? 100 * st.sent / st.exp : 0).toFixed(1) + '%"></i></div>';
+    } else x += '<p>' + fmt(st.sent) + ' school(s) have sent. <span class="note">Type the number of schools you expect, or your list of schools, under "Our schools" above to see who has not sent.</span></p>';
+    if (st.missing.length) {
+      x += '<h3 style="color:var(--bad)">Not sent yet (' + st.missing.length + ')</h3>' + tbl(['School', 'District', 'Location', 'EMIS'], st.missing.map(function (o) { return [h(o.name), h(o.district), h(o.location), h(o.emis)]; }), 9);
+      x += '<button class="btn sm noprint" onclick="CEU.csvMissing()">⬇ Not sent yet (Excel)</button>';
+    } else if (st.scope.length) x += '<div class="msg ok">Every school on your list has sent. ✔</div>';
+    if (st.list.length && st.notSent > st.missing.length) x += '<p class="note">' + (st.notSent - st.missing.length) + ' more school(s) you expect are not on your list, so their names cannot be shown.</p>';
+    if (st.list.length && st.notOnList.length) x += '<h3>Sent, but not matched to a school on your list (' + st.notOnList.length + ')</h3>' + tbl(['School', 'District'], st.notOnList.map(function (r) { return [h(r.d.name), h(r.d.district)]; }), 9);
+    return x + '</div>';
+  }
+  function renderOur() {
+    var list = ours(), e = expected(), x = '<h2>Our schools</h2>';
+    x += '<p class="note">Type all the schools under the Unit, with the head teacher\'s phone number. A school\'s data is taken by itself when its name and phone match your list. Anything else waits for you to accept or refuse.</p>';
+    x += '<label class="f">Number of schools we expect data from<input id="ourExp" type="number" inputmode="numeric" min="0" step="1" value="' + (e || '') + '" placeholder="' + (list.length ? list.length + ' (the schools on the list)' : 'e.g. 120') + '"></label>';
+    x += '<button class="btn sm" onclick="CEU.saveExpected()">Save the number</button><span class="note"> Leave it empty to use the number of schools on your list.</span>';
+    x += '<details' + (list.length ? '' : ' open') + '><summary>Add a school</summary><div class="two">' +
+      '<label class="f">School name<input id="ourName" placeholder="e.g. St. Mary R/C Basic"></label>' +
+      '<label class="f">District<input id="ourDist"></label>' +
+      '<label class="f">Location (town or village)<input id="ourLoc"></label>' +
+      '<label class="f">EMIS code (if known)<input id="ourEmis"></label>' +
+      '<label class="f">Head teacher\'s phone<input id="ourPhone" type="tel" placeholder="e.g. 0244123456"></label></div><button class="btn" onclick="CEU.addOne()">Add the school</button></details>';
+    x += '<details><summary>Add many schools at once</summary><p class="note">One school per line: <b>School name, District, Location, EMIS code, Head teacher\'s phone</b>. Leave a part empty if you do not have it. You can also copy the five columns from Excel and paste them here.</p>' +
+      '<textarea id="ourBulk" placeholder="St. Mary R/C Basic, Kumasi Metro, Asafo, EM001, 0244123456&#10;Holy Cross R/C Primary, Obuasi, Tutuka, , 0201234567"></textarea><button class="btn" onclick="CEU.addMany()">Add these schools</button></details>';
+    x += '<div id="ourMsg"></div>';
+    if (list.length) {
+      x += '<details id="ourList"><summary>Our list (' + list.length + ' schools)</summary>';
+      x += '<p class="note">When a school forgets its recovery password, tap <b>Show</b> and read it to them, after checking it is really the school.</p>';
+      x += list.map(function (o) {
+        return '<div class="sch"><div class="sch-t"><b>' + h(o.name) + '</b><div class="note" style="margin:0">' + h([o.district, o.location, o.emis && 'EMIS ' + o.emis].filter(Boolean).join(' · ')) + '</div>' +
+          '<div class="note" style="margin:0">📱 ' + (o.phone ? h(o.phone) + (phoneOk(o.phone) ? '' : ' <span style="color:var(--bad)">(not a 10-number phone)</span>') : '<span style="color:var(--bad)">no phone number</span>') + '</div>' +
+          '<div class="note" style="margin:0">Recovery password: ' + (o.rpw ? '<span class="codebig" data-pwv="' + h(o.id) + '">••••••••</span> <button class="btn sm alt" data-pw="' + h(o.id) + '">Show</button>' : 'not received yet (it comes with the school\'s first data)') + '</div></div><div></div>' +
+          '<div class="sch-b"><button class="btn sm alt" data-ph="' + h(o.id) + '">✎ Phone</button><button class="btn sm bad" data-odel="' + h(o.id) + '">Remove</button></div></div>';
+      }).join('') + '<button class="btn sm" onclick="CEU.csvList()">⬇ Our schools (Excel)</button> <button class="btn sm bad" onclick="CEU.clearList()">Remove the whole list</button></details>';
+    }
+    var card = $('ourCard'), wasOpen = $('ourList') && $('ourList').open, q;
+    card.innerHTML = x;
+    if (wasOpen && $('ourList')) $('ourList').open = true;
+    var pws = card.querySelectorAll('[data-pw]');
+    for (q = 0; q < pws.length; q++) pws[q].onclick = function () {
+      var id = this.getAttribute('data-pw'), o = ours().filter(function (z) { return z.id === id; })[0], v = card.querySelector('[data-pwv="' + id + '"]');
+      if (!o || !v) return;
+      var shown = this.textContent === 'Hide';
+      v.textContent = shown ? '••••••••' : unscramble(o.rpw); this.textContent = shown ? 'Show' : 'Hide';
+    };
+    var phs = card.querySelectorAll('[data-ph]');
+    for (q = 0; q < phs.length; q++) phs[q].onclick = function () { editPhone(this.getAttribute('data-ph')); };
+    var dels = card.querySelectorAll('[data-odel]');
+    for (q = 0; q < dels.length; q++) dels[q].onclick = function () {
+      var id = this.getAttribute('data-odel'), all = ours(), o = all.filter(function (z) { return z.id === id; })[0];
+      if (o && confirm('Remove ' + o.name + ' from your list?')) { sset('ceu_schools', all.filter(function (z) { return z.id !== id; })); renderOur(); renderOffice(); }
+    };
+  }
+  function editPhone(id) {
+    var all = ours(), o = all.filter(function (q) { return q.id === id; })[0];
+    if (!o) return;
+    var v = prompt('Head teacher\'s phone for ' + o.name + ' (10 numbers, like 0244123456):', o.phone || '');
+    if (v === null) return;
+    o.phone = phoneOk(v) ? ghPhone(v) : clip(v); sset('ceu_schools', all);
+    var pend = sget('ceu_pending') || []; sset('ceu_pending', []); addRecords(pend);      // waiting forms that now match go in
+    renderOur(); renderOffice();
+    if ($('ourList')) $('ourList').open = true;
+  }
+  function csvList() {
+    download('CEU_our_schools_' + today() + '.csv', csv([['School', 'District', 'Location', 'EMIS', 'Phone']].concat(ours().map(function (o) { return [o.name, o.district, o.location, o.emis, o.phone]; }))), 'text/csv');
+  }
+  /* forms whose school name and phone did not match the list */
+  function pendingCard() {
+    var pend = sget('ceu_pending') || [], list = ours();
+    if (!pend.length) return '';
+    var x = '<div class="card noprint" id="ofPending"><h2 style="color:var(--warn)">New schools waiting (' + pend.length + ')</h2><p class="note">These schools sent data, but their name and phone number do not match your list. Phone the school to check, then accept or refuse.</p>';
+    pend.forEach(function (r) {
+      var o = matchOf(r, list), why = !o ? 'Not on your list.' : !o.phone ? 'Your list has no phone number for this school.' : 'Phone ' + r.d.phone + ' is different from your list (' + o.phone + ').';
+      x += '<div class="sch"><div class="sch-t"><b>' + h(r.d.name) + '</b><div class="note" style="margin:0">' + h([r.d.district, r.d.location, '📱 ' + r.d.phone].filter(Boolean).join(' · ')) + '</div>' +
+        '<div class="flag">' + h(why) + '</div><div class="note" style="margin:0">' + h(r.d.collection) + ' · sent ' + h(r.savedAt.slice(0, 10)) + '</div>' +
+        '<label class="f" style="margin:6px 0 0">Accept as<select data-as="' + h(r.id) + '"><option value="new">A new school on my list</option>' +
+        list.map(function (q) { return '<option value="' + h(q.id) + '"' + (o && o.id === q.id ? ' selected' : '') + '>' + h(q.name) + (q.district ? ' (' + h(q.district) + ')' : '') + '</option>'; }).join('') + '</select></label></div><div></div>' +
+        '<div class="sch-b"><button class="btn sm ok" data-acc="' + h(r.id) + '">Accept</button><button class="btn sm bad" data-ref="' + h(r.id) + '">Refuse</button></div></div>';
+    });
+    return x + '</div>';
+  }
+  function acceptPending(id, as) {
+    var pend = sget('ceu_pending') || [], r = pend.filter(function (q) { return q.id === id; })[0];
+    if (!r) return;
+    var list = ours(), o = list.filter(function (q) { return q.id === as; })[0];
+    if (!o) addOurs([{ name: r.d.name, district: r.d.district, location: r.d.location, emis: r.d.emis, phone: r.d.phone }]);
+    else {
+      o.phone = ghPhone(r.d.phone);
+      if (nameKey(o.name) !== nameKey(r.d.name)) o.alias = (o.alias || []).concat([nameKey(r.d.name)]);
+      sset('ceu_schools', list);
+    }
+    sset('ceu_pending', []);
+    var res = addRecords([r], true);
+    addRecords(pend.filter(function (q) { return q.id !== id; }));          // the others: those from the same school now match
+    renderOur(); renderOffice();
+    showMsg({ text: r.d.name + ' accepted. ' + res.text });
+  }
+  function refusePending(id) {
+    var pend = sget('ceu_pending') || [], r = pend.filter(function (q) { return q.id === id; })[0];
+    if (!r || !confirm('Refuse the data from ' + r.d.name + '? It will be removed.')) return;
+    sset('ceu_pending', pend.filter(function (q) { return q.id !== id; })); renderOffice();
+  }
+  function ourMsg(r) {
+    retryPending();
+    var p = [];
+    if (r.added) p.push(r.added + ' school' + (r.added > 1 ? 's' : '') + ' added to your list.');
+    if (r.dup) p.push(r.dup + ' already on the list.');
+    if (!p.length) p.push('Type the school name first.');
+    renderOur(); renderOffice();
+    $('ourMsg').innerHTML = '<div class="msg ' + (r.added ? 'ok' : 'warn') + '">' + h(p.join(' ')) + '</div>';
+  }
+  function addOne() { ourMsg(addOurs([{ name: $('ourName').value, district: $('ourDist').value, location: $('ourLoc').value, emis: $('ourEmis').value, phone: $('ourPhone').value }])); }
+  function addMany() { ourMsg(addOurs(parseList($('ourBulk').value))); }
+  function retryPending() { var pend = sget('ceu_pending') || []; if (pend.length) { sset('ceu_pending', []); addRecords(pend); } }
+  function saveExpected() {
+    var v = $('ourExp').value === '' ? null : Math.floor(Number($('ourExp').value));
+    sset('ceu_expected', v > 0 ? v : null); renderOur(); renderOffice();
+    $('ourMsg').innerHTML = '<div class="msg ok">' + (v > 0 ? 'Saved: ' + v + ' schools expected.' : 'Saved: the number of schools on your list is used.') + '</div>';
+  }
+  function clearList() { if (confirm('Remove your whole list of schools? The data the schools sent stays.')) { sset('ceu_schools', []); renderOur(); renderOffice(); } }
+  function csvMissing() {
+    var st = sentStatus(current());
+    download('CEU_not_sent_' + today() + '.csv', csv([['School', 'District', 'Location', 'EMIS']].concat(st.missing.map(function (o) { return [o.name, o.district, o.location, o.emis]; }))), 'text/csv');
+  }
+  /* files and pasted text may hold school forms, or a backup (forms + list of schools) */
+  function importItems(items) {
+    var forms = [], trusted = [], extra = '', r;
+    items.forEach(function (x) {
+      if (x && x.app === 'CEU-BACKUP') {
+        trusted = trusted.concat(x.recs || []);
+        var o = addOurs(x.schools || []);
+        if (o.added) extra += ' ' + o.added + ' school(s) added to your list.';
+        if (x.expected && !expected()) sset('ceu_expected', x.expected);
+        if (x.pending && x.pending.length) { var pd = sget('ceu_pending') || [], ids = {}; pd.forEach(function (q) { ids[q.id] = 1; }); x.pending.forEach(function (q) { if (q && !ids[q.id]) pd.push(q); }); sset('ceu_pending', pd); }
+      } else forms.push(x);
+    });
+    if (forms.length || trusted.length || !extra) { r = addRecords(trusted.concat(forms), trusted); r.text += extra; }
+    else r = { text: extra.trim() };
+    renderOur();
+    return r;
+  }
+
+  /* one school's full sheet */
+  function schoolSheet(r) {
+    var d = r.d, t = totals(d), w = validate(d).warnings, x = '<div class="card" id="ofSchool">';
+    x += '<button class="btn sm alt noprint" onclick="CEU.pick(\'\')">⬅ Back to all schools</button>';
+    x += '<h2 style="margin-top:8px">' + h(d.name) + '</h2><p class="note">' + [d.district, d.circuit && 'Circuit: ' + d.circuit, d.parish && 'Parish: ' + d.parish, d.emis && 'EMIS: ' + d.emis].filter(Boolean).map(h).join(' · ') + '</p>';
+    x += tbl(['', ''], [['Head teacher', h(d.head || '–') + (d.phone ? ' · ' + h(d.phone) : '')], ['Filled in by', h(d.filledBy || '–')], ['Sent', h(r.savedAt.slice(0, 16).replace('T', ' '))],
+      ['Levels', LEVELS.filter(function (l) { return d[l[2]]; }).map(function (l) { return l[1]; }).join(', ')], ['Collection', h(d.collection)]], 9);
+    x += '<div class="tiles" style="margin-top:10px">' + tile(fmt(t.p), 'pupils (' + fmt(t.b) + ' boys, ' + fmt(t.g) + ' girls)') + tile(fmt(t.teach), 'teachers') + tile(t.teach ? fmt(t.p / t.teach, 1) : '–', 'pupils per teacher') + tile(pct(t.trained, t.teach), 'teachers trained') + tile(ratio(t.p, n(d, 'f_cls')), 'pupils per classroom') + '</div>';
+    var rows = [];
+    CLS.forEach(function (c) { if (d['lv' + c[2]]) { var b = n(d, 'e_' + c[0] + '_b'), g = n(d, 'e_' + c[0] + '_g'); rows.push([c[1], fmt(b), fmt(g), fmt(b + g)]); } });
+    var tr = ['All pupils', fmt(t.b), fmt(t.g), fmt(t.p)]; tr.sum = 1; rows.push(tr);
+    x += '<h3>Pupils</h3>' + tbl(['Class', 'Boys', 'Girls', 'Total'], rows);
+    x += tbl(['', 'Boys', 'Girls', 'Total'], [['New admissions', fmt(n(d, 'adm_b')), fmt(n(d, 'adm_g')), fmt(n(d, 'adm_b') + n(d, 'adm_g'))], ['Dropouts', fmt(n(d, 'drop_b')), fmt(n(d, 'drop_g')), fmt(n(d, 'drop_b') + n(d, 'drop_g'))], ['Special needs', fmt(n(d, 'sen_b')), fmt(n(d, 'sen_g')), fmt(n(d, 'sen_b') + n(d, 'sen_g'))]]);
+    x += '<h3>Teachers and staff</h3>' + tbl(['', 'Male', 'Female', 'Total'], [['Teachers', fmt(n(d, 't_m')), fmt(n(d, 't_f')), fmt(t.teach)], ['Trained', fmt(n(d, 'tr_m')), fmt(n(d, 'tr_f')), fmt(t.trained)], ['Non-teaching staff', fmt(n(d, 'nt_m')), fmt(n(d, 'nt_f')), fmt(n(d, 'nt_m') + n(d, 'nt_f'))]]);
+    x += tbl(['Qualification', 'Teachers'], [['Degree', fmt(n(d, 'q_deg'))], ['Diploma', fmt(n(d, 'q_dip'))], ['Cert A', fmt(n(d, 'q_cert'))], ['Other / none', fmt(n(d, 'q_oth'))], ['Vacancies', fmt(n(d, 'vac'))]]);
+    if (d.x_name) {
+      var pass = 0; XB.forEach(function (k, i) { if (i < PASS_BANDS) pass += n(d, k); });
+      x += '<h3>Exam: ' + h(d.x_name) + '</h3><p>' + fmt(n(d, 'x_sat')) + ' sat of ' + fmt(n(d, 'x_reg')) + ' registered · pass rate (aggregate 6–30) <b>' + pct(pass, n(d, 'x_sat')) + '</b>' + (has(d, 'x_mean') ? ' · mean aggregate <b>' + fmt(d.x_mean, 1) + '</b>' : '') + '</p>';
+      x += tbl(['Aggregate', 'Candidates'], XB.map(function (k, i) { return [BANDS[i], fmt(n(d, k))]; }));
+      var cr = SUBJ.filter(function (q) { return has(d, 'c_' + q[0]); }).map(function (q) { return [q[1], fmt(d['c_' + q[0]]), pct(d['c_' + q[0]], n(d, 'x_sat'))]; });
+      if (cr.length) x += tbl(['Subject', 'Grades 1–6', 'Rate'], cr);
+    }
+    x += '<h3>Facilities</h3>' + tbl(['', ''], [['Classrooms', fmt(n(d, 'f_cls')) + ' (' + fmt(n(d, 'f_clsg')) + ' in good condition)'], ['Seats for pupils', fmt(n(d, 'f_seat'))], ['Toilets', fmt(n(d, 'f_toi')) + ' (' + fmt(n(d, 'f_toiw')) + ' working)'],
+      ['Computers', fmt(n(d, 'f_comp')) + ' (' + fmt(n(d, 'f_compw')) + ' working)'], ['Core textbooks', fmt(n(d, 'f_book'))], ['Safe drinking water', h(d.f_water || '–')], ['Electricity', h(d.f_elec || '–')], ['Library', h(d.f_lib || '–')]]);
+    x += '<h3>Checks</h3>' + (w.length ? '<ul>' + w.map(function (q) { return '<li class="flag">' + h(q.m) + '</li>'; }).join('') + '</ul>' : '<div class="msg ok">No unusual numbers.</div>');
+    return x + '</div>';
+  }
+  function pick(id) { flt.sch = id; renderOffice(); var el = $(id ? 'ofSchool' : 'ofBody'); if (el) el.scrollIntoView(); }
+  var flt = { col: null, dist: '', sch: '' };
+  function current() {
+    var all = recs(), cols = {}, order = [];
+    all.forEach(function (r) { var k = norm(r.d.collection); if (!cols[k]) { cols[k] = { name: r.d.collection, latest: '' }; order.push(k); } if (r.savedAt > cols[k].latest) cols[k].latest = r.savedAt; });
+    order.sort(function (a, b) { return cols[a].latest < cols[b].latest ? 1 : -1; });
+    if (!flt.col || !cols[flt.col]) flt.col = order[0] || null;
+    var inCol = all.filter(function (r) { return norm(r.d.collection) === flt.col; });
+    var dists = {}, dorder = [];
+    inCol.concat(ours().map(function (o) { return { d: o }; })).forEach(function (r) { var k = norm(r.d.district); if (k && !dists[k]) { dists[k] = r.d.district; dorder.push(k); } });
+    dorder.sort(function (a, b) { return dists[a] < dists[b] ? -1 : 1; });
+    if (flt.dist && !dists[flt.dist]) flt.dist = '';
+    var list = flt.dist ? inCol.filter(function (r) { return norm(r.d.district) === flt.dist; }) : inCol;
+    list.sort(function (a, b) { return String(a.d.name).toLowerCase() < String(b.d.name).toLowerCase() ? -1 : 1; });
+    return { all: all, cols: cols, order: order, inCol: inCol, dists: dists, dorder: dorder, list: list };
+  }
+  function renderOffice() {
+    var c = current(), body = $('ofBody');
+    if (!c.all.length) { body.innerHTML = pendingCard() + '<div class="card"><h2>No data yet</h2><p class="note">When schools send their data, add it above. The statistics appear here by themselves.</p></div>' + (ours().length || expected() ? statusCard(c) : ''); wireOffice(body); return; }
+    var T = compute(c.list), s = T.s, x = '';
+    var one = flt.sch ? c.list.filter(function (r) { return r.id === flt.sch; })[0] : null;
+    if (!one) flt.sch = '';
+    x += '<div class="card noprint"><div class="two"><label class="f">Collection<select id="ofCol">' + c.order.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.col ? ' selected' : '') + '>' + h(c.cols[k].name) + '</option>'; }).join('') + '</select></label>';
+    x += '<label class="f">District<select id="ofDist"><option value="">All districts</option>' + c.dorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.dist ? ' selected' : '') + '>' + h(c.dists[k]) + '</option>'; }).join('') + '</select></label></div>';
+    x += '<label class="f">Schools that have sent (' + c.list.length + ')<select id="ofSch"><option value="">All schools – see the statistics</option>' + c.list.map(function (r) { return '<option value="' + h(r.id) + '"' + (r.id === flt.sch ? ' selected' : '') + '>' + h(r.d.name) + ' – ' + h(r.d.district) + '</option>'; }).join('') + '</select></label>';
+    x += '<button class="btn sm" onclick="CEU.csvAll()">⬇ All schools (Excel)</button><button class="btn sm" onclick="CEU.csvSummary()">⬇ Summary by district (Excel)</button><button class="btn sm alt" onclick="window.print()">🖨 Print / PDF</button></div>';
+    if (one) { body.innerHTML = x + schoolSheet(one); wireOffice(body); return; }
+    x = pendingCard() + x + statusCard(c);
+    x += '<div class="card"><h2>' + h(c.cols[flt.col].name) + (flt.dist ? ' · ' + h(c.dists[flt.dist]) : ' · all districts') + '</h2><div class="tiles" id="ofTiles">';
+    x += tile(fmt(T.n), 'schools') + tile(fmt(T.p), 'pupils (' + fmt(T.b) + ' boys, ' + fmt(T.g) + ' girls)') + tile(fmt(T.teach), 'teachers (' + fmt(s.t_m) + ' male, ' + fmt(s.t_f) + ' female)');
+    x += tile(T.ptr == null ? '–' : fmt(T.ptr, 1), 'pupils per teacher') + tile(pct(T.trained, T.teach), 'teachers trained') + tile(T.gpi == null ? '–' : fmt(T.gpi, 2), 'gender parity (girls ÷ boys)');
+    x += tile(ratio(T.p, s.f_cls), 'pupils per classroom') + tile(T.passRate == null ? '–' : pct(T.passAll, T.satAll), 'exam pass rate (aggregate 6–30)');
+    x += '</div></div>';
+    /* pupils */
+    var rows = [], ch = [];
+    LEVELS.forEach(function (l) {
+      var L = T.lv[l[0]];
+      CLS.forEach(function (cl) { if (cl[2] !== l[0]) return; var v = T.cls[cl[0]]; rows.push([cl[1], fmt(v.b), fmt(v.g), fmt(v.b + v.g), v.b ? fmt(v.g / v.b, 2) : '–']); ch.push({ label: cl[1], v: [v.b, v.g] }); });
+      var r = [l[1] + ' total', fmt(L.b), fmt(L.g), fmt(L.b + L.g), L.b ? fmt(L.g / L.b, 2) : '–']; r.sum = 1; rows.push(r);
+    });
+    var tr = ['All pupils', fmt(T.b), fmt(T.g), fmt(T.p), T.gpi == null ? '–' : fmt(T.gpi, 2)]; tr.sum = 1; rows.push(tr);
+    x += '<div class="card"><h2>Pupils</h2>' + bars(ch, ['var(--boy)', 'var(--girl)'].map(cssVar), ['Boys', 'Girls']) + tbl(['Class', 'Boys', 'Girls', 'Total', 'Girls ÷ boys'], rows);
+    x += '<h3>This school year</h3>' + tbl(['', 'Boys', 'Girls', 'Total', 'Rate'], [
+      ['New admissions', fmt(s.adm_b), fmt(s.adm_g), fmt(s.adm_b + s.adm_g), pct(s.adm_b + s.adm_g, T.p) + ' of pupils'],
+      ['Dropouts', fmt(s.drop_b), fmt(s.drop_g), fmt(s.drop_b + s.drop_g), pct(s.drop_b + s.drop_g, T.p + s.drop_b + s.drop_g) + ' dropout rate'],
+      ['Special needs', fmt(s.sen_b), fmt(s.sen_g), fmt(s.sen_b + s.sen_g), pct(s.sen_b + s.sen_g, T.p) + ' of pupils']]);
+    x += '<p class="note">Schools with KG: ' + T.lv.KG.n + ' · Primary: ' + T.lv.P.n + ' · JHS: ' + T.lv.J.n + '</p></div>';
+    /* teachers */
+    x += '<div class="card"><h2>Teachers and staff</h2>' + tbl(['', 'Male', 'Female', 'Total', ''], [
+      ['Teachers', fmt(s.t_m), fmt(s.t_f), fmt(T.teach), pct(s.t_f, T.teach) + ' female'],
+      ['Trained teachers', fmt(s.tr_m), fmt(s.tr_f), fmt(T.trained), pct(T.trained, T.teach) + ' trained'],
+      ['Non-teaching staff', fmt(s.nt_m), fmt(s.nt_f), fmt(T.nt), '']]);
+    x += '<h3>Highest qualification</h3>' + bars([{ label: 'Degree', v: [s.q_deg] }, { label: 'Diploma', v: [s.q_dip] }, { label: 'Cert A', v: [s.q_cert] }, { label: 'Other/none', v: [s.q_oth] }], [cssVar('var(--pri)')]);
+    x += tbl(['Qualification', 'Teachers', 'Share'], [['Degree', fmt(s.q_deg), pct(s.q_deg, T.teach)], ['Diploma', fmt(s.q_dip), pct(s.q_dip, T.teach)], ['Cert A', fmt(s.q_cert), pct(s.q_cert, T.teach)], ['Other / none', fmt(s.q_oth), pct(s.q_oth, T.teach)]]);
+    x += '<p>Pupils per teacher: <b>' + (T.ptr == null ? '–' : fmt(T.ptr, 1)) + '</b> · Pupils per trained teacher: <b>' + ratio(T.p, T.trained) + '</b> · Teachers still needed: <b>' + fmt(s.vac) + '</b></p></div>';
+    /* exams */
+    if (T.exList.length) {
+      T.exList.forEach(function (E) {
+        x += '<div class="card"><h2>Exam: ' + h(E.name) + '</h2><div class="tiles">' + tile(fmt(E.n), 'schools sent results') + tile(fmt(E.sat), 'candidates sat (of ' + fmt(E.reg) + ' registered)') + tile(E.rate == null ? '–' : pct(E.pass, E.sat), 'pass rate (aggregate 6–30)') + tile(E.mean == null ? '–' : fmt(E.mean, 1), 'mean aggregate') + '</div>';
+        x += '<h3>Candidates by aggregate</h3>' + bars(BANDS.map(function (b, i) { return { label: b, v: [E.bands[i]] }; }), [cssVar('var(--ok)')]);
+        x += tbl(['Aggregate', 'Candidates', 'Share'], BANDS.map(function (b, i) { return [b, fmt(E.bands[i]), pct(E.bands[i], E.sat)]; }));
+        var cr = SUBJ.filter(function (q) { return E.cred[q[0]]; }).map(function (q) { var v = E.cred[q[0]]; return [q[1], fmt(v.n), fmt(v.sat), fmt(v.c), pct(v.c, v.sat)]; });
+        if (cr.length) x += '<h3>Grades 1–6 by subject</h3>' + tbl(['Subject', 'Schools', 'Sat', 'Grades 1–6', 'Rate'], cr);
+        var sc = E.schools.slice().sort(function (a, b) { return (b.rate || 0) - (a.rate || 0); });
+        x += '<h3>Schools by pass rate</h3>' + tbl(['#', 'School', 'District', 'Sat', 'Passed', 'Pass rate', 'Mean agg.'], sc.map(function (q, i) { return [i + 1, h(q.name), h(q.district), fmt(q.sat), fmt(q.pass), q.sat ? pct(q.pass, q.sat) : '–', q.mean == null ? '–' : fmt(q.mean, 1)]; }), 3);
+        x += '</div>';
+      });
+    }
+    /* facilities */
+    x += '<div class="card"><h2>Facilities</h2>' + tbl(['', 'Number', 'Measure'], [
+      ['Classrooms', fmt(s.f_cls), pct(s.f_clsg, s.f_cls) + ' in good condition · ' + ratio(T.p, s.f_cls) + ' pupils per classroom'],
+      ['Seats for pupils', fmt(s.f_seat), ratio(s.f_seat, T.p, 2) + ' seats per pupil · ' + fmt(Math.max(0, T.p - s.f_seat)) + ' pupils without a seat'],
+      ['Toilets', fmt(s.f_toi), pct(s.f_toiw, s.f_toi) + ' working · ' + ratio(T.p, s.f_toiw, 0) + ' pupils per working toilet'],
+      ['Computers', fmt(s.f_comp), pct(s.f_compw, s.f_comp) + ' working · ' + ratio(T.p, s.f_compw, 0) + ' pupils per working computer'],
+      ['Core textbooks', fmt(s.f_book), ratio(s.f_book, T.p, 1) + ' per pupil'],
+      ['Schools with safe water', fmt(T.yes.f_water), pct(T.yes.f_water, T.n) + ' of schools'],
+      ['Schools with electricity', fmt(T.yes.f_elec), pct(T.yes.f_elec, T.n) + ' of schools'],
+      ['Schools with a library', fmt(T.yes.f_lib), pct(T.yes.f_lib, T.n) + ' of schools']]) + '</div>';
+    /* districts */
+    if (!flt.dist && c.dorder.length > 1) {
+      x += '<div class="card"><h2>Districts compared</h2>' + tbl(['District', 'Schools', 'Pupils', 'Girls ÷ boys', 'Teachers', 'Pupils per teacher', 'Trained', 'Pass rate'], c.dorder.map(function (k) {
+        var D = compute(c.inCol.filter(function (r) { return norm(r.d.district) === k; }));
+        return [h(c.dists[k]), fmt(D.n), fmt(D.p), D.gpi == null ? '–' : fmt(D.gpi, 2), fmt(D.teach), D.ptr == null ? '–' : fmt(D.ptr, 1), pct(D.trained, D.teach), D.passRate == null ? '–' : pct(D.passAll, D.satAll)];
+      })) + '</div>';
+    }
+    /* schools */
+    var flags = [];
+    x += '<div class="card"><h2>Schools (' + c.list.length + ')</h2>' + tbl(['School', 'District', 'Pupils', 'Teachers', 'Pupils per teacher', 'Checks', ''], c.list.map(function (r) {
+      var t = totals(r.d), w = validate(r.d).warnings;
+      if (w.length) flags.push({ r: r, w: w });
+      return [h(r.d.name) + '<div class="note" style="margin:0">' + h(r.d.filledBy || '') + ' · ' + h(r.savedAt.slice(0, 10)) + '</div>', h(r.d.district), fmt(t.p), fmt(t.teach), t.teach ? fmt(t.p / t.teach, 1) : '–', w.length ? '<span class="flag">⚠ ' + w.length + '</span>' : '✔', '<button class="btn sm alt noprint" data-view="' + h(r.id) + '">Open</button> <button class="btn sm bad noprint" data-del="' + h(r.id) + '">Remove</button>'];
+    }), 2) + '</div>';
+    x += '<div class="card"><h2>Data checks</h2>';
+    if (!flags.length) x += '<div class="msg ok">No unusual numbers found.</div>';
+    else x += '<p class="note">These were confirmed by the school as correct, but are worth a look.</p>' + flags.map(function (f) { return '<p><b>' + h(f.r.d.name) + '</b> (' + h(f.r.d.district) + ')</p><ul>' + f.w.map(function (w) { return '<li class="flag">' + h(w.m) + '</li>'; }).join('') + '</ul>'; }).join('');
+    x += '</div>';
+    x += '<div class="card noprint"><h2>This device</h2><p class="note">' + c.all.length + ' school form(s) kept on this device. Save a backup file (it also holds your list of schools and their recovery passwords, so keep it safe) to move them to another computer: add it above there.</p><button class="btn alt" onclick="CEU.backup()">💾 Save a backup file</button><button class="btn bad" onclick="CEU.clearAll()">Remove all data</button></div>';
+    body.innerHTML = x;
+    wireOffice(body);
+  }
+  function wireOffice(body) {
+    var i, el;
+    if ((el = $('ofCol'))) el.onchange = function () { flt.col = this.value; flt.dist = ''; flt.sch = ''; renderOffice(); };
+    if ((el = $('ofDist'))) el.onchange = function () { flt.dist = this.value; flt.sch = ''; renderOffice(); };
+    if ((el = $('ofSch'))) el.onchange = function () { pick(this.value); };
+    var views = body.querySelectorAll('[data-view]');
+    for (i = 0; i < views.length; i++) views[i].onclick = function () { pick(this.getAttribute('data-view')); };
+    var accs = body.querySelectorAll('[data-acc]');
+    for (i = 0; i < accs.length; i++) accs[i].onclick = function () { var id = this.getAttribute('data-acc'), sel = body.querySelector('[data-as="' + id + '"]'); acceptPending(id, sel ? sel.value : 'new'); };
+    var refs = body.querySelectorAll('[data-ref]');
+    for (i = 0; i < refs.length; i++) refs[i].onclick = function () { refusePending(this.getAttribute('data-ref')); };
+    var dels = body.querySelectorAll('[data-del]');
+    for (i = 0; i < dels.length; i++) dels[i].onclick = function () {
+      var id = this.getAttribute('data-del'), all = recs(), r = all.filter(function (q) { return q.id === id; })[0];
+      if (r && confirm('Remove ' + r.d.name + ' from the statistics?')) { sset('ceu_office', all.filter(function (q) { return q.id !== id; })); renderOffice(); }
+    };
+  }
+  var CSSV = { '--boy': '#3b6fd8', '--girl': '#d4467a', '--pri': '#1f3f8f', '--ok': '#1d7a46', '--bad': '#b3261e' };
+  function cssVar(v) { var m = /var\((--[a-z]+)\)/.exec(v); return m ? CSSV[m[1]] : v; }
+  function csvCell(v) {
+    if (v == null) return '';
+    var s = String(v);
+    if (typeof v !== 'number' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function csv(rows) { return '﻿' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n'); }
+  function csvAll() {
+    var c = current(), head = ALLKEYS.map(function (k) { return LABEL[k] || k; }).concat(['Total pupils', 'Total teachers', 'Saved at', 'Checks']);
+    var rows = [head].concat(c.list.map(function (r) {
+      var t = totals(r.d);
+      return ALLKEYS.map(function (k) { var v = r.d[k]; return v === true ? 'Yes' : v; }).concat([t.p, t.teach, r.savedAt, validate(r.d).warnings.map(function (w) { return w.m; }).join(' | ')]);
+    }));
+    download('CEU_' + fileSafe(c.cols[flt.col].name) + '_schools.csv', csv(rows), 'text/csv');
+  }
+  function csvSummary() {
+    var c = current(), rows = [['District', 'Schools', 'Boys', 'Girls', 'Pupils', 'Girls per boy', 'Teachers', 'Trained teachers', '% trained', 'Pupils per teacher', 'Classrooms', 'Pupils per classroom', 'Dropouts', 'Candidates sat', 'Passed (agg 6-30)', 'Pass rate %']];
+    function row(name, D) { return [name, D.n, D.b, D.g, D.p, D.gpi == null ? '' : +D.gpi.toFixed(2), D.teach, D.trained, D.teach ? +(100 * D.trained / D.teach).toFixed(1) : '', D.ptr == null ? '' : +D.ptr.toFixed(1), D.s.f_cls, D.s.f_cls ? +(D.p / D.s.f_cls).toFixed(1) : '', D.s.drop_b + D.s.drop_g, D.satAll, D.passAll, D.satAll ? +(100 * D.passAll / D.satAll).toFixed(1) : '']; }
+    c.dorder.forEach(function (k) { rows.push(row(c.dists[k], compute(c.inCol.filter(function (r) { return norm(r.d.district) === k; })))); });
+    rows.push(row('ALL DISTRICTS', compute(c.inCol)));
+    download('CEU_' + fileSafe(c.cols[flt.col].name) + '_summary.csv', csv(rows), 'text/csv');
+  }
+  function backup() { download('CEU_backup_' + today() + '.json', JSON.stringify({ app: 'CEU-BACKUP', v: 1, recs: recs(), schools: ours(), expected: expected(), pending: sget('ceu_pending') || [] }), 'application/json'); }
+  function clearAll() { if (confirm('Remove all the data schools sent from this device? Your list of schools stays. Save a backup first if you need it.')) { sset('ceu_office', []); renderOffice(); } }
+
+  /* ---------- screens ---------- */
+  function go(where, view) {
+    if (where === 'school' && !session.school) where = 'gate';
+    ['home', 'gate', 'school', 'office'].forEach(function (k) { $(k).className = k === where ? '' : 'hide'; });
+    $('hdHome').className = where === 'home' ? 'hide' : '';
+    $('hdLock').className = where === 'office' && unlocked ? '' : 'hide';
+    $('schoolBar').className = 'bar hide';
+    $('hdSub').textContent = where === 'school' || where === 'gate' ? (session.school ? session.school.name : 'School log in') : where === 'office' ? 'Unit office' : 'School data collection · works without internet';
+    if (where === 'gate') renderGate(view);
+    if (where === 'school') openSchool();
+    if (where === 'office') {
+      $('ofLock').className = unlocked ? 'hide' : ''; $('ofMain').className = unlocked ? '' : 'hide';
+      if (unlocked) { $('ofMsg').innerHTML = ''; renderOur(); renderOffice(); } else { $('ofBody').innerHTML = ''; $('ourCard').innerHTML = ''; renderLock(); }
+    }
+    window.scrollTo(0, 0);
+  }
+  $('ofFiles').addEventListener('change', function () { readFiles(this.files); this.value = ''; });
+  window.CEU = { go: go, finish: finish, edit: edit, newForm: newForm, addPasted: addPasted, csvAll: csvAll, csvSummary: csvSummary, backup: backup, clearAll: clearAll,
+    lock: lock, logout: logout, csvList: csvList, sha256: sha256, regs: regs, unscramble: unscramble,
+    addOne: addOne, addMany: addMany, saveExpected: saveExpected, clearList: clearList, csvMissing: csvMissing, pick: pick, ours: ours,
+    compute: compute, validate: validate, addRecords: addRecords, parseText: parseText, sumOf: sumOf, codeOf: codeOf, recs: recs };
+  /* on the web address: work offline after the first visit, and suggest adding it to the Home Screen */
+  if (/^https?:$/.test(location.protocol)) {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+    var standalone = window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (!standalone) $('installTip').innerHTML = '<div class="msg warn"><b>Add this to your Home Screen</b> so it works without internet and keeps your data: on iPhone tap <b>Share → Add to Home Screen</b>; on Android tap <b>⋮ → Add to Home screen</b>. Then always open it from the icon.</div>';
+  }
+  go('home');
+})();
+</script>
+</body>
+</html>
