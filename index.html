@@ -392,6 +392,8 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       s += '<h2>Set the office password</h2><p class="note">Only people who know it can open the statistics, the list of schools and their recovery passwords. Use at least 6 letters or numbers. Write it down and keep it safe: it cannot be shown again.</p>';
       s += '<label class="f">New password<input id="lkPw1" type="password" autocomplete="new-password"></label><label class="f">Type it again<input id="lkPw2" type="password" autocomplete="new-password"></label>';
       s += '<button class="btn big" id="lkBtn">Save the password</button><div id="lkMsg"></div>';
+      s += '<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:10px"><b>Already using the office on another device?</b><p class="note">Load the backup file from that device instead. It brings the schools, their data and the same office password.</p>' +
+        '<label class="btn alt">📂 Load the backup file from my other device<input id="lkBackup" type="file" accept=".json,application/json" class="hide"></label><div id="lkRestore"></div></div>';
     } else {
       s += '<h2>Unit office</h2><p class="note">For the Catholic Education Unit office only.</p><label class="f">Office password<input id="lkPw" type="password" autocomplete="current-password"></label>';
       s += '<button class="btn big" id="lkBtn">Open</button><div id="lkMsg"></div>';
@@ -400,10 +402,34 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     $('ofLock').innerHTML = s + '</div>';
     $('lkBtn').onclick = pw ? unlock : setPassword;
     var f = $(pw ? 'lkPw' : 'lkPw2'); f.onkeydown = function (e) { if (e.keyCode === 13) $('lkBtn').click(); };
+    if (!pw) $('lkBackup').onchange = function () { if (this.files[0]) restoreStart(this.files[0]); this.value = ''; };
     if (pw) $('lkForgot').onclick = function () {
       if (!confirm('Remove ALL office data on this device (schools, passwords, data)? Only do this if you have a backup file or want to start again.')) return;
       ['ceu_office', 'ceu_schools', 'ceu_expected', 'ceu_pw'].forEach(sdel); renderLock();
     };
+  }
+  /* a new device: set up the office from the backup of another device, with the same password */
+  function restoreStart(f) {
+    var fr = new FileReader(), box = $('lkRestore');
+    fr.onload = function () {
+      var bk = parseBackup(fr.result);
+      if (!bk) { box.innerHTML = '<div class="msg bad">This is not an office backup file. Choose the file named like CEU_backup_….json.</div>'; return; }
+      if (!bk.pw || !bk.pw.hash) { box.innerHTML = '<div class="msg warn">This backup was made before backups carried the office password. Set a new password above, then upload this backup in the office (Upload Excel files).</div>'; return; }
+      box.innerHTML = '<div class="msg ok">Backup found: ' + (bk.schools || []).length + ' school(s) on the list, ' + (bk.recs || []).length + ' form(s) of data.</div>' +
+        '<label class="f">Office password used on your other device<input id="lkOld" type="password" autocomplete="current-password"></label><button class="btn" id="lkRestoreBtn">Open with this password</button><div id="lkRMsg"></div>';
+      $('lkRestoreBtn').onclick = function () {
+        var now = Date.now();
+        if (now < tries.until) { $('lkRMsg').innerHTML = '<div class="msg bad">Too many wrong tries. Wait ' + Math.ceil((tries.until - now) / 1000) + ' seconds.</div>'; return; }
+        if (pwHash(bk.pw.salt, $('lkOld').value) !== bk.pw.hash) { if (++tries.n >= 5) { tries.n = 0; tries.until = now + 30000; } $('lkRMsg').innerHTML = '<div class="msg bad">Wrong password for this backup.</div>'; return; }
+        tries.n = 0;
+        sset('ceu_pw', { salt: bk.pw.salt, hash: bk.pw.hash });
+        var r = importItems([bk]);
+        unlocked = true; go('office');
+        r.text = '✔ Restored from the backup. The office password is the same as on your other device. ' + r.text;
+        showMsg(r);
+      };
+    };
+    fr.readAsText(f);
   }
   function setPassword() {
     var a = $('lkPw1').value, b = $('lkPw2').value;
@@ -1514,7 +1540,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if (!flags.length) x += '<div class="msg ok">No unusual numbers found.</div>';
     else x += '<p class="note">These were confirmed by the school as correct, but are worth a look.</p>' + flags.map(function (f) { return '<p><b>' + h(f.r.d.name) + '</b> (' + h(f.r.d.district) + ')</p><ul>' + f.w.map(function (w) { return '<li class="flag">' + h(w.m) + '</li>'; }).join('') + '</ul>'; }).join('');
     x += '</div>';
-    x += '<div class="card noprint"><h2>This device</h2><p class="note">' + c.all.length + ' school form(s) kept on this device. Save a backup file (it also holds your list of schools and their recovery passwords, so keep it safe) to move them to another computer: add it above there.</p><button class="btn alt" onclick="CEU.backup()">💾 Save a backup file</button><button class="btn bad" onclick="CEU.clearAll()">Remove all data</button></div>';
+    x += '<div class="card noprint"><h2>This device</h2><p class="note">' + c.all.length + ' school form(s) kept on this device. Save a backup file to move everything to another device: there, choose <b>Load the backup file from my other device</b> and use the same office password. The file holds your list of schools, their recovery passwords and the office password (protected), so keep it safe.</p><button class="btn alt" onclick="CEU.backup()">💾 Save a backup file</button><button class="btn bad" onclick="CEU.clearAll()">Remove all data</button></div>';
     body.innerHTML = x;
     wireOffice(body);
   }
@@ -1593,7 +1619,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     rows.push(row(flt.reg ? c.regs[flt.reg] : '', flt.reg ? 'ALL ' + c.regs[flt.reg].toUpperCase() : 'ALL REGIONS', compute(c.inScope)));
     download('CEU_' + fileSafe(c.cols[flt.col].name) + '_summary.csv', csv(rows), 'text/csv');
   }
-  function backup() { download('CEU_backup_' + today() + '.json', JSON.stringify({ app: 'CEU-BACKUP', v: 1, recs: recs(), schools: ours(), expected: expected(), pending: sget('ceu_pending') || [] }), 'application/json'); }
+  function backup() { download('CEU_backup_' + today() + '.json', JSON.stringify({ app: 'CEU-BACKUP', v: 1, pw: sget('ceu_pw'), recs: recs(), schools: ours(), expected: expected(), pending: sget('ceu_pending') || [] }), 'application/json'); }
   function clearAll() { if (confirm('Remove all the data schools sent from this device? Your list of schools stays. Save a backup first if you need it.')) { sset('ceu_office', []); renderOffice(); } }
 
   /* ---------- screens ---------- */
