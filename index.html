@@ -75,6 +75,9 @@ input.w,select.w{border-color:#d29c00;background:var(--warnbg)}
 .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin:0 4px 0 10px}
 svg{max-width:100%;height:auto;display:block}
 .flag{color:var(--warn);font-size:.85rem}
+table.totals td,table.totals th{white-space:nowrap}
+table.totals tr.grp td{background:var(--pri2);color:var(--pri);font-weight:700}
+table.totals td.tt,table.totals th:last-child{font-weight:700}
 .aggs{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px;margin:4px 0 8px}
 .aggs input{width:100%;text-align:center;padding:9px 4px}
 .prog{background:#e3e8f2;border-radius:8px;height:14px;overflow:hidden;margin:6px 0 10px}
@@ -249,7 +252,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   var SCR = 'CEU-unit-recovery';
   function scramble(t) { var o = ''; for (var i = 0; i < t.length; i++) o += String.fromCharCode(t.charCodeAt(i) ^ SCR.charCodeAt(i % SCR.length)); return btoa(o); }
   function unscramble(t) { try { var x = atob(t), o = ''; for (var i = 0; i < x.length; i++) o += String.fromCharCode(x.charCodeAt(i) ^ SCR.charCodeAt(i % SCR.length)); return o; } catch (e) { return ''; } }
-  function ghPhone(v) { var p = String(v || '').replace(/[^\d+]/g, ''); if (/^\+233\d{9}$/.test(p)) return '0' + p.slice(4); if (/^233\d{9}$/.test(p)) return '0' + p.slice(3); return p; }
+  function ghPhone(v) { var p = String(v || '').replace(/[^\d+]/g, ''); if (/^[2-5]\d{8}$/.test(p)) return '0' + p; if (/^\+233\d{9}$/.test(p)) return '0' + p.slice(4); if (/^233\d{9}$/.test(p)) return '0' + p.slice(3); return p; }
   function phoneOk(v) { return /^0\d{9}$/.test(ghPhone(v)); }
 
   /* ---------- schools on this phone: register, PIN, recovery password ---------- */
@@ -696,7 +699,35 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     });
   }
   function xesc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
-  function colName(i) { return 'ABC'.charAt(i); }
+  function colName(i) { var s = ''; i++; while (i > 0) { var m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+  function sheetName(t, used) { var n = String(t).replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Sheet', b = n, k = 2; while (used[n.toLowerCase()]) n = b.slice(0, 28) + ' ' + k++; used[n.toLowerCase()] = 1; return n; }
+  /* sheets: [{ name, rows: [[ [value, bold], … ], …], widths: [..], hideCols: [..], hidden }] */
+  function xlsxBook(sheets) {
+    var NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', P = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    var head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n', ws = 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml', used = {};
+    var files = [
+      { name: '[Content_Types].xml', text: head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' + sheets.map(function (x, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="' + ws + '"/>'; }).join('') +
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+      { name: '_rels/.rels', text: head + '<Relationships xmlns="' + P + '"><Relationship Id="rId1" Type="' + R + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+      { name: 'xl/workbook.xml', text: head + '<workbook xmlns="' + NS + '" xmlns:r="' + R + '"><sheets>' + sheets.map(function (x, i) { return '<sheet name="' + xesc(sheetName(x.name, used)) + '" sheetId="' + (i + 1) + '"' + (x.hidden ? ' state="hidden"' : '') + ' r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', text: head + '<Relationships xmlns="' + P + '">' + sheets.map(function (x, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="' + R + '/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="' + R + '/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', text: head + '<styleSheet xmlns="' + NS + '"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' }
+    ];
+    sheets.forEach(function (x, si) {
+      var cols = (x.widths || []).map(function (w, i) { return '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"' + ((x.hideCols || []).indexOf(i) >= 0 ? ' hidden="1"' : '') + '/>'; }).join('');
+      var sd = x.rows.map(function (r, ri) {
+        return '<row r="' + (ri + 1) + '">' + r.map(function (c, ci) {
+          if (!c || c[0] === undefined || c[0] === null || c[0] === '') return '';
+          var ref = colName(ci) + (ri + 1), st = c[1] ? ' s="1"' : '';
+          return typeof c[0] === 'number' ? '<c r="' + ref + '"' + st + '><v>' + c[0] + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xesc(c[0]) + '</t></is></c>';
+        }).join('') + '</row>';
+      }).join('');
+      files.push({ name: 'xl/worksheets/sheet' + (si + 1) + '.xml', text: head + '<worksheet xmlns="' + NS + '">' + (cols ? '<cols>' + cols + '</cols>' : '') + '<sheetData>' + sd + '</sheetData></worksheet>' });
+    });
+    return zip(files);
+  }
   function xlsxOf(rec) {
     var d = rec.d, t = totals(d), rows = [];
     rows.push([['Catholic Education Unit – School data', 1]]);
@@ -707,65 +738,61 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     ALLKEYS.forEach(function (k) { if (d[k] === undefined) return; rows.push([[LABEL[k] || k], [cellVal(d[k])], [k]]); });
     rows.push([]);
     rows.push([['Made with the CEU school data tool. Do not change this file: the Unit office will refuse a changed file.']]);
-    var sd = rows.map(function (r, ri) {
-      return '<row r="' + (ri + 1) + '">' + r.map(function (c, ci) {
-        var ref = colName(ci) + (ri + 1), st = c[1] ? ' s="1"' : '';
-        return typeof c[0] === 'number' ? '<c r="' + ref + '"' + st + '><v>' + c[0] + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xesc(c[0]) + '</t></is></c>';
-      }).join('') + '</row>';
-    }).join('');
-    var NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', P = 'http://schemas.openxmlformats.org/package/2006/relationships';
-    var head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-    var ws = 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml';
-    return zip([
-      { name: '[Content_Types].xml', text: head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="' + ws + '"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="' + ws + '"/>' +
-        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
-      { name: '_rels/.rels', text: head + '<Relationships xmlns="' + P + '"><Relationship Id="rId1" Type="' + R + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
-      { name: 'xl/workbook.xml', text: head + '<workbook xmlns="' + NS + '" xmlns:r="' + R + '"><sheets><sheet name="School data" sheetId="1" r:id="rId1"/><sheet name="ceu" sheetId="2" state="hidden" r:id="rId2"/></sheets></workbook>' },
-      { name: 'xl/_rels/workbook.xml.rels', text: head + '<Relationships xmlns="' + P + '"><Relationship Id="rId1" Type="' + R + '/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="' + R + '/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="' + R + '/styles" Target="styles.xml"/></Relationships>' },
-      { name: 'xl/styles.xml', text: head + '<styleSheet xmlns="' + NS + '"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
-        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
-      { name: 'xl/worksheets/sheet1.xml', text: head + '<worksheet xmlns="' + NS + '"><cols><col min="1" max="1" width="44" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="3" width="12" hidden="1" customWidth="1"/></cols><sheetData>' + sd + '</sheetData></worksheet>' },
-      { name: 'xl/worksheets/sheet2.xml', text: head + '<worksheet xmlns="' + NS + '"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>' + xesc(JSON.stringify(rec)) + '</t></is></c></row></sheetData></worksheet>' }
-    ]);
+    return xlsxBook([{ name: 'School data', rows: rows, widths: [44, 30, 12], hideCols: [2] }, { name: 'ceu', hidden: true, rows: [[[JSON.stringify(rec)]]] }]);
   }
   function cellVal(v) { return v === true ? 'Yes' : v instanceof Array ? v.join(', ') : v; }
   function xlName(rec) { return 'CEU_' + fileSafe(rec.d.collection) + '_' + fileSafe(rec.d.name) + '.xlsx'; }
+  /* an opened Excel book: its sheets in order, and the cells of each */
+  function bookOf(files) {
+    var dp = new DOMParser();
+    function xml(name) { var b = files[name]; return b ? dp.parseFromString(fromUtf8(b), 'application/xml') : null; }
+    function els(node, tag) { return node.getElementsByTagNameNS('*', tag); }
+    function txt(node) { var ts = els(node, 't'), o = ''; for (var i = 0; i < ts.length; i++) o += ts[i].textContent; return o; }
+    var shared = [], ss = xml('xl/sharedStrings.xml'), i;
+    if (ss) { var si = els(ss, 'si'); for (i = 0; i < si.length; i++) shared.push(txt(si[i])); }
+    var wb = xml('xl/workbook.xml'), rels = xml('xl/_rels/workbook.xml.rels'), target = {}, book = { order: [], hidden: {}, docs: {} };
+    if (!wb || !rels) return null;
+    var rs = els(rels, 'Relationship');
+    for (i = 0; i < rs.length; i++) target[rs[i].getAttribute('Id')] = rs[i].getAttribute('Target');
+    var sh = els(wb, 'sheet');
+    for (i = 0; i < sh.length; i++) {
+      var rid = sh[i].getAttribute('r:id') || sh[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+      var tg = String(target[rid] || '').replace(/^\/?xl\//, '').replace(/^\//, ''), nm = sh[i].getAttribute('name');
+      book.order.push(nm); book.docs[nm] = xml('xl/' + tg); if (/hidden/i.test(sh[i].getAttribute('state') || '')) book.hidden[nm] = true;
+    }
+    book.cells = function (nm) {
+      var doc = book.docs[nm], out = {};
+      if (!doc) return out;
+      var cs = els(doc, 'c');
+      for (var j = 0; j < cs.length; j++) {
+        var c = cs[j], t = c.getAttribute('t'), vv = els(c, 'v')[0], val;
+        if (t === 'inlineStr') val = txt(c); else if (t === 's') val = shared[+(vv ? vv.textContent : -1)]; else val = vv ? vv.textContent : '';
+        out[c.getAttribute('r')] = val;
+      }
+      return out;
+    };
+    book.rows = function (nm) {
+      var cells = book.cells(nm), rows = [];
+      for (var ref in cells) {
+        var m = /^([A-Z]+)(\d+)$/.exec(ref); if (!m) continue;
+        var ci = 0; for (var q = 0; q < m[1].length; q++) ci = ci * 26 + (m[1].charCodeAt(q) - 64);
+        var ri = +m[2] - 1; (rows[ri] = rows[ri] || [])[ci - 1] = cells[ref];
+      }
+      for (var r = 0; r < rows.length; r++) rows[r] = rows[r] || [];
+      return rows;
+    };
+    return book;
+  }
   /* gives back the school's form, or null if it is not one; a form whose visible numbers were changed comes back marked */
   function readXlsx(buf, done) {
     unzip(buf, function (files) {
       try {
         if (!files) return done(null);
-        var dp = new DOMParser();
-        function xml(name) { var b = files[name]; return b ? dp.parseFromString(fromUtf8(b), 'application/xml') : null; }
-        function els(node, tag) { return node.getElementsByTagNameNS('*', tag); }
-        function txt(node) { var ts = els(node, 't'), o = ''; for (var i = 0; i < ts.length; i++) o += ts[i].textContent; return o; }
-        var shared = [], ss = xml('xl/sharedStrings.xml');
-        if (ss) { var si = els(ss, 'si'); for (var i = 0; i < si.length; i++) shared.push(txt(si[i])); }
-        var wb = xml('xl/workbook.xml'), rels = xml('xl/_rels/workbook.xml.rels'), target = {};
-        if (!wb || !rels) return done(null);
-        var rs = els(rels, 'Relationship');
-        for (i = 0; i < rs.length; i++) target[rs[i].getAttribute('Id')] = rs[i].getAttribute('Target');
-        var sheets = {}, sh = els(wb, 'sheet');
-        for (i = 0; i < sh.length; i++) {
-          var rid = sh[i].getAttribute('r:id') || sh[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
-          var tg = String(target[rid] || '').replace(/^\/?xl\//, '').replace(/^\//, '');
-          sheets[sh[i].getAttribute('name')] = xml('xl/' + tg);
-        }
-        function cells(doc) {
-          var out = {}, cs = els(doc, 'c');
-          for (var j = 0; j < cs.length; j++) {
-            var c = cs[j], t = c.getAttribute('t'), vv = els(c, 'v')[0], val;
-            if (t === 'inlineStr') val = txt(c); else if (t === 's') val = shared[+(vv ? vv.textContent : -1)]; else val = vv ? vv.textContent : '';
-            out[c.getAttribute('r')] = val;
-          }
-          return out;
-        }
-        if (!sheets.ceu || !sheets['School data']) return done(null);
-        var rec = JSON.parse(cells(sheets.ceu).A1 || 'null');
+        var book = bookOf(files);
+        if (!book || !book.docs.ceu || !book.docs['School data']) return done(null);
+        var rec = JSON.parse(book.cells('ceu').A1 || 'null');
         if (!rec || !rec.d) return done(null);
-        /* every visible value must still be what the school saved */
-        var vis = cells(sheets['School data']), seen = {}, same = true;
+        var vis = book.cells('School data'), seen = {}, same = true;
         for (var ref in vis) {
           var m = /^C(\d+)$/.exec(ref);
           if (!m || !LABEL[vis[ref]]) continue;
@@ -976,19 +1003,111 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function nameKey(v) { return String(v || '').toLowerCase().replace(/\bsaint\b/g, 'st').replace(/\bschools?\b/g, '').replace(/[^a-z0-9]+/g, ''); }
   function ourKey(o) { return nameKey(o.name) + '|' + norm(o.district); }
   function expected() { var e = sget('ceu_expected'); return typeof e === 'number' && e > 0 ? e : null; }
+  /* the school on the list a row is about: same EMIS, or same name (and not another district) */
+  function findOur(all, n) {
+    var ek = norm(n.emis), nk = nameKey(n.name), i;
+    if (ek) for (i = 0; i < all.length; i++) if (norm(all[i].emis) === ek) return all[i];
+    var same = all.filter(function (o) { return (nameKey(o.name) === nk || (o.alias || []).indexOf(nk) >= 0) && (!n.district || !o.district || norm(o.district) === norm(n.district)); });
+    return same.length === 1 ? same[0] : null;
+  }
+  var OURK = ['region', 'district', 'circuit', 'location', 'emis', 'head', 'phone'];
+  function ourRow(o) {
+    return { name: clip(o.name), region: regionOf(o.region) || clip(o.region), district: clip(o.district), circuit: clip(o.circuit), location: clip(o.location), emis: clip(o.emis), head: clip(o.head), phone: phoneOk(o.phone) ? ghPhone(o.phone) : clip(o.phone) };
+  }
+  /* adds new schools and updates the details of schools already on the list; never removes one */
   function addOurs(list) {
-    var all = ours(), seen = {}, res = { added: 0, dup: 0 };
-    all.forEach(function (o) { seen[ourKey(o)] = 1; });
+    var all = ours(), res = { added: 0, updated: 0, dup: 0 };
     list.forEach(function (o) {
       if (!o || !clip(o.name)) return;
-      o = { id: o.id || rid(), name: clip(o.name), region: regionOf(o.region) || clip(o.region), district: clip(o.district), location: clip(o.location), emis: clip(o.emis), phone: phoneOk(o.phone) ? ghPhone(o.phone) : clip(o.phone), alias: o.alias || [], rpw: o.rpw || '', rpwAt: o.rpwAt || '' };
-      var k = ourKey(o);
-      if (seen[k]) { res.dup++; return; }
-      seen[k] = 1; all.push(o); res.added++;
+      var n = ourRow(o), ex = findOur(all, n);
+      if (!ex) { n.id = o.id || rid(); n.alias = o.alias || []; n.rpw = o.rpw || ''; n.rpwAt = o.rpwAt || ''; all.push(n); res.added++; return; }
+      var changed = false;
+      OURK.forEach(function (k) { if (n[k] && n[k] !== ex[k]) { ex[k] = n[k]; changed = true; } });
+      if (o.rpw && (!ex.rpw || (o.rpwAt || '') > (ex.rpwAt || ''))) { ex.rpw = o.rpw; ex.rpwAt = o.rpwAt; changed = true; }
+      if (changed) res.updated++; else res.dup++;
     });
     all.sort(function (a, b) { return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1; });
     sset('ceu_schools', all);
     return res;
+  }
+  /* a table from an uploaded file → schools. Columns are found by their headings; NUMBER is a phone if it looks like one, else EMIS */
+  function schoolsFromTable(rows) {
+    var hi = -1, map = {}, out = [], skipped = 0;
+    for (var r = 0; r < Math.min(rows.length, 15) && hi < 0; r++) {
+      var cand = {};
+      (rows[r] || []).forEach(function (cell, ci) {
+        var t = String(cell || '').toLowerCase().trim(); if (!t) return;
+        var f = /emis/.test(t) ? 'emis' : /head/.test(t) && !/phone|tel|mobile|contact|number/.test(t) ? 'head' : /phone|tel|mobile|contact/.test(t) ? 'phone' : /region/.test(t) ? 'region' : /district/.test(t) ? 'district' :
+          /circuit/.test(t) ? 'circuit' : /town|location|village|community|locality/.test(t) ? 'location' : /name|school/.test(t) ? 'name' : /number|^no\.?$/.test(t) ? 'number' : '';
+        if (f && cand[f] == null) cand[f] = ci;
+      });
+      if (cand.name != null && Object.keys(cand).length >= 2) { hi = r; map = cand; }
+    }
+    if (hi < 0) map = { name: 0, region: 1, district: 2, location: 3, emis: 4, phone: 5 };
+    for (r = hi + 1; r < rows.length; r++) {
+      var row = rows[r] || [], o = {};
+      if (!row.some(function (v) { return String(v || '').trim(); })) continue;
+      for (var f in map) o[f] = String(row[map[f]] == null ? '' : row[map[f]]).trim();
+      if (o.number) { if (!o.phone && phoneOk(o.number)) o.phone = o.number; else if (!o.emis) o.emis = o.number; }
+      delete o.number;
+      if (!o.name) { skipped++; continue; }
+      out.push(o);
+    }
+    return { schools: out, skipped: skipped, found: Object.keys(map), header: hi >= 0 };
+  }
+  function parseCsv(text) {
+    text = String(text || '').replace(/^﻿/, '');
+    var first = text.split(/\r?\n/)[0] || '', dl = [',', ';', '\t'].sort(function (a, b) { return first.split(b).length - first.split(a).length; })[0];
+    var rows = [], row = [], cell = '', q = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (q) { if (ch === '"') { if (text.charAt(i + 1) === '"') { cell += '"'; i++; } else q = false; } else cell += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === dl) { row.push(cell); cell = ''; }
+      else if (ch === '\n' || ch === '\r') { if (ch === '\r' && text.charAt(i + 1) === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+  var listUpload = null;
+  function readListFile(f) {
+    var msg = $('ourMsg');
+    if (/\.pdf$/i.test(f.name)) { msg.innerHTML = '<div class="msg warn">A PDF cannot be read. Upload the list as Excel (.xlsx) or CSV. If you only have the PDF: open it, copy the table and paste it under <b>Add many schools at once</b>.</div>'; return; }
+    if (/\.xls$/i.test(f.name)) { msg.innerHTML = '<div class="msg warn">This is an old Excel file (.xls). Open it in Excel and use <b>Save As → Excel Workbook (.xlsx)</b>, then upload that.</div>'; return; }
+    var fr = new FileReader(), isX = /\.xlsx$/i.test(f.name);
+    function show(rows) {
+      if (!rows) { msg.innerHTML = '<div class="msg bad">Could not read ' + h(f.name) + '. Upload an Excel (.xlsx) or CSV file.</div>'; return; }
+      var t = schoolsFromTable(rows), all = ours(), add = 0, upd = 0, same = 0, badReg = {};
+      t.schools.forEach(function (o) {
+        var n = ourRow(o), ex = findOur(all, n);
+        if (o.region && !regionOf(o.region)) badReg[o.region] = 1;
+        if (!ex) add++; else if (OURK.some(function (k) { return n[k] && n[k] !== ex[k]; })) upd++; else same++;
+      });
+      listUpload = t.schools;
+      var x = '<div class="msg ' + (t.schools.length ? 'ok' : 'warn') + '"><b>Found ' + t.schools.length + ' school(s) in ' + h(f.name) + '.</b> ' + add + ' new, ' + upd + ' to update with new details, ' + same + ' already on your list with the same details.' +
+        (t.skipped ? ' ' + t.skipped + ' row(s) skipped (no school name).' : '') + (Object.keys(badReg).length ? ' Regions not recognised (kept as written): ' + h(Object.keys(badReg).join(', ')) + '.' : '') +
+        (t.header ? '' : ' No headings found: read as Name, Region, District, Location, EMIS, Phone.') + '</div>';
+      if (t.schools.length) {
+        x += '<p class="note">Check the first rows:</p>' + tbl(['School', 'Region', 'District', 'Circuit', 'Town', 'Phone', 'Head teacher', 'EMIS'], t.schools.slice(0, 8).map(function (o) {
+          o = ourRow(o);
+          return [h(o.name), h(o.region), h(o.district), h(o.circuit), h(o.location), h(o.phone), h(o.head), h(o.emis)];
+        }), 9);
+        x += '<button class="btn ok" id="ourApply">Add / update these ' + t.schools.length + ' schools</button><button class="btn alt" id="ourCancel">Cancel</button>';
+      }
+      msg.innerHTML = x;
+      if ($('ourApply')) $('ourApply').onclick = function () { var l = listUpload; listUpload = null; ourMsg(addOurs(l)); };
+      if ($('ourCancel')) $('ourCancel').onclick = function () { listUpload = null; msg.innerHTML = ''; };
+    }
+    fr.onload = function () {
+      if (!isX) return show(parseCsv(fr.result));
+      unzip(fr.result, function (files) {
+        var book = files && bookOf(files), nm = book && book.order.filter(function (n) { return !book.hidden[n]; })[0];
+        show(nm ? book.rows(nm) : null);
+      });
+    };
+    fr.onerror = function () { show(null); };
+    if (isX) fr.readAsArrayBuffer(f); else fr.readAsText(f);
   }
   /* one school per line: name, district, town, EMIS (commas, or columns copied from Excel) */
   function parseList(text) {
@@ -997,7 +1116,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       if (!line.trim()) return;
       var p = line.indexOf('\t') >= 0 ? line.split('\t') : line.split(',');
       if (i === 0 && /school/i.test(p[0]) && /region|district/i.test(p[1] || '')) return;     // a heading row
-      if (regionOf(p[1]) || p.length >= 6) out.push({ name: p[0], region: p[1], district: p[2], location: p[3], emis: p[4], phone: p[5] });
+      if (regionOf(p[1]) || p.length >= 6) out.push({ name: p[0], region: p[1], district: p[2], location: p[3], emis: p[4], phone: p[5], circuit: p[6], head: p[7] });
       else out.push({ name: p[0], district: p[1], location: p[2], emis: p[3], phone: p[4] });      // older lists without the region
     });
     return out;
@@ -1041,12 +1160,16 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     x += '<p class="note">Type all the schools under the Unit, with the head teacher\'s phone number. A school\'s data is taken by itself when its name and phone match your list. Anything else waits for you to accept or refuse.</p>';
     x += '<label class="f">Number of schools we expect data from<input id="ourExp" type="number" inputmode="numeric" min="0" step="1" value="' + (e || '') + '" placeholder="' + (list.length ? list.length + ' (the schools on the list)' : 'e.g. 120') + '"></label>';
     x += '<button class="btn sm" onclick="CEU.saveExpected()">Save the number</button><span class="note"> Leave it empty to use the number of schools on your list.</span>';
+    x += '<div style="margin:12px 0 4px"><label class="btn">📂 Upload your list of schools (Excel or CSV)<input id="ourFile" type="file" accept=".xlsx,.csv,.xls,.pdf,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hide"></label></div>' +
+      '<p class="note" style="margin-top:0">Columns such as <b>Name of school, Region, District, Circuit, Town, Number</b> (phone) and <b>Headteacher</b> are found by their headings. New schools are added, known ones updated; none is removed. A PDF cannot be read: copy its table and paste it under <b>Add many schools at once</b>.</p>';
     x += '<details' + (list.length ? '' : ' open') + '><summary>Add a school</summary><div class="two">' +
       '<label class="f">School name<input id="ourName" placeholder="e.g. St. Mary R/C Basic"></label>' +
       '<label class="f">Region' + regionSel('ourRegion') + '</label>' +
       '<label class="f">District<input id="ourDist"></label>' +
+      '<label class="f">Circuit<input id="ourCirc"></label>' +
       '<label class="f">Location (town or village)<input id="ourLoc"></label>' +
       '<label class="f">EMIS code (if known)<input id="ourEmis"></label>' +
+      '<label class="f">Head teacher<input id="ourHead"></label>' +
       '<label class="f">Head teacher\'s phone<input id="ourPhone" type="tel" placeholder="e.g. 0244123456"></label></div><button class="btn" onclick="CEU.addOne()">Add the school</button></details>';
     x += '<details><summary>Add many schools at once</summary><p class="note">One school per line: <b>School name, Region, District, Location, EMIS code, Head teacher\'s phone</b>. Leave a part empty if you do not have it. You can also copy the six columns from Excel and paste them here.</p>' +
       '<textarea id="ourBulk" placeholder="St. Mary R/C Basic, Ashanti, Kumasi Metro, Asafo, EM001, 0244123456&#10;Holy Cross R/C Primary, Ashanti, Obuasi, Tutuka, , 0201234567"></textarea><button class="btn" onclick="CEU.addMany()">Add these schools</button></details>';
@@ -1055,7 +1178,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
       x += '<details id="ourList"><summary>Our list (' + list.length + ' schools)</summary>';
       x += '<p class="note">When a school forgets its recovery password, tap <b>Show</b> and read it to them, after checking it is really the school.</p>';
       x += list.map(function (o) {
-        return '<div class="sch"><div class="sch-t"><b>' + h(o.name) + '</b><div class="note" style="margin:0">' + h([o.region, o.district, o.location, o.emis && 'EMIS ' + o.emis].filter(Boolean).join(' · ')) + '</div>' +
+        return '<div class="sch"><div class="sch-t"><b>' + h(o.name) + '</b><div class="note" style="margin:0">' + h([o.region, o.district, o.circuit && 'Circuit: ' + o.circuit, o.location, o.emis && 'EMIS ' + o.emis].filter(Boolean).join(' · ')) + (o.head ? '<br>Head teacher: ' + h(o.head) : '') + '</div>' +
           '<div class="note" style="margin:0">📱 ' + (o.phone ? h(o.phone) + (phoneOk(o.phone) ? '' : ' <span style="color:var(--bad)">(not a 10-number phone)</span>') : '<span style="color:var(--bad)">no phone number</span>') + '</div>' +
           '<div class="note" style="margin:0">Recovery password: ' + (o.rpw ? '<span class="codebig" data-pwv="' + h(o.id) + '">••••••••</span> <button class="btn sm alt" data-pw="' + h(o.id) + '">Show</button>' : 'not received yet (it comes with the school\'s first data)') + '</div></div><div></div>' +
           '<div class="sch-b"><button class="btn sm alt" data-ph="' + h(o.id) + '">✎ Phone</button><button class="btn sm bad" data-odel="' + h(o.id) + '">Remove</button></div></div>';
@@ -1063,6 +1186,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     }
     var card = $('ourCard'), wasOpen = $('ourList') && $('ourList').open, q;
     card.innerHTML = x;
+    $('ourFile').onchange = function () { if (this.files[0]) readListFile(this.files[0]); this.value = ''; };
     if (wasOpen && $('ourList')) $('ourList').open = true;
     var pws = card.querySelectorAll('[data-pw]');
     for (q = 0; q < pws.length; q++) pws[q].onclick = function () {
@@ -1090,7 +1214,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if ($('ourList')) $('ourList').open = true;
   }
   function csvList() {
-    download('CEU_our_schools_' + today() + '.csv', csv([['School', 'Region', 'District', 'Location', 'EMIS', 'Phone']].concat(ours().map(function (o) { return [o.name, o.region, o.district, o.location, o.emis, o.phone]; }))), 'text/csv');
+    download('CEU_our_schools_' + today() + '.csv', csv([['School', 'Region', 'District', 'Circuit', 'Location', 'EMIS', 'Head teacher', 'Phone']].concat(ours().map(function (o) { return [o.name, o.region, o.district, o.circuit, o.location, o.emis, o.head, o.phone]; }))), 'text/csv');
   }
   /* forms whose school name and phone did not match the list */
   function pendingCard() {
@@ -1111,7 +1235,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var pend = sget('ceu_pending') || [], r = pend.filter(function (q) { return q.id === id; })[0];
     if (!r) return;
     var list = ours(), o = list.filter(function (q) { return q.id === as; })[0];
-    if (!o) addOurs([{ name: r.d.name, region: r.d.region, district: r.d.district, location: r.d.location, emis: r.d.emis, phone: r.d.phone }]);
+    if (!o) addOurs([{ name: r.d.name, region: r.d.region, circuit: r.d.circuit, head: r.d.head, district: r.d.district, location: r.d.location, emis: r.d.emis, phone: r.d.phone }]);
     else {
       o.phone = ghPhone(r.d.phone);
       if (nameKey(o.name) !== nameKey(r.d.name)) o.alias = (o.alias || []).concat([nameKey(r.d.name)]);
@@ -1132,12 +1256,13 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     retryPending();
     var p = [];
     if (r.added) p.push(r.added + ' school' + (r.added > 1 ? 's' : '') + ' added to your list.');
+    if (r.updated) p.push(r.updated + ' updated with new details.');
     if (r.dup) p.push(r.dup + ' already on the list.');
     if (!p.length) p.push('Type the school name first.');
     renderOur(); renderOffice();
-    $('ourMsg').innerHTML = '<div class="msg ' + (r.added ? 'ok' : 'warn') + '">' + h(p.join(' ')) + '</div>';
+    $('ourMsg').innerHTML = '<div class="msg ' + (r.added || r.updated ? 'ok' : 'warn') + '">' + h(p.join(' ')) + '</div>';
   }
-  function addOne() { ourMsg(addOurs([{ name: $('ourName').value, region: $('ourRegion').value, district: $('ourDist').value, location: $('ourLoc').value, emis: $('ourEmis').value, phone: $('ourPhone').value }])); }
+  function addOne() { ourMsg(addOurs([{ name: $('ourName').value, region: $('ourRegion').value, district: $('ourDist').value, location: $('ourLoc').value, emis: $('ourEmis').value, phone: $('ourPhone').value, circuit: $('ourCirc').value, head: $('ourHead').value }])); }
   function addMany() { ourMsg(addOurs(parseList($('ourBulk').value))); }
   function retryPending() { var pend = sget('ceu_pending') || []; if (pend.length) { sset('ceu_pending', []); addRecords(pend); } }
   function saveExpected() {
@@ -1196,6 +1321,78 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     return x + '</div>';
   }
   function pick(id) { flt.sch = id; renderOffice(); var el = $(id ? 'ofSchool' : 'ofBody'); if (el) el.scrollIntoView(); }
+
+  /* ---------- totals of everything, by district, region and the whole Unit ---------- */
+  function totalRows(T) {
+    var s = T.s, R = [];
+    function g(t) { R.push([t]); }
+    function r(l, v) { R.push([l, v || 0]); }
+    function bgt(l, b, gi) { r(l + ' – boys', b); r(l + ' – girls', gi); r(l + ' – total', b + gi); }
+    g('Schools'); r('Schools that sent data', T.n); LEVELS.forEach(function (l) { r('Schools with ' + l[1], T.lv[l[0]].n); });
+    g('Pupils'); CLS.forEach(function (c) { bgt(c[1], T.cls[c[0]].b, T.cls[c[0]].g); });
+    LEVELS.forEach(function (l) { bgt(l[1] + ' (all classes)', T.lv[l[0]].b, T.lv[l[0]].g); });
+    bgt('All pupils', T.b, T.g);
+    g('This school year'); bgt('New admissions', s.adm_b, s.adm_g); bgt('Dropouts', s.drop_b, s.drop_g); bgt('Pupils with special needs', s.sen_b, s.sen_g);
+    g('Teachers and staff'); r('Teachers – male', s.t_m); r('Teachers – female', s.t_f); r('Teachers – total', T.teach);
+    r('Trained teachers – male', s.tr_m); r('Trained teachers – female', s.tr_f); r('Trained teachers – total', T.trained);
+    r('Teachers with a degree', s.q_deg); r('Teachers with a diploma', s.q_dip); r('Teachers with Cert A', s.q_cert); r('Teachers with other / no qualification', s.q_oth);
+    r('Non-teaching staff – male', s.nt_m); r('Non-teaching staff – female', s.nt_f); r('Non-teaching staff – total', T.nt); r('Teacher vacancies', s.vac);
+    var ex = { reg: 0, sat: 0, pass: 0, bands: [0, 0, 0, 0, 0, 0, 0], cred: {} };
+    T.exList.forEach(function (E) { ex.reg += E.reg; ex.sat += E.sat; ex.pass += E.pass; E.bands.forEach(function (v, i) { ex.bands[i] += v; }); for (var k in E.cred) ex.cred[k] = (ex.cred[k] || 0) + E.cred[k].c; });
+    g('Exam results'); r('Candidates registered', ex.reg); r('Candidates who sat', ex.sat); r('Candidates who passed (aggregate 6–30)', ex.pass);
+    BANDS.forEach(function (b, i) { r('Candidates with aggregate ' + b, ex.bands[i]); });
+    SUBJ.forEach(function (q) { r(q[1] + ' – candidates with grades 1–6', ex.cred[q[0]]); });
+    g('Facilities'); r('Classrooms', s.f_cls); r('Classrooms in good condition', s.f_clsg); r('Seats for pupils', s.f_seat); r('Toilets', s.f_toi); r('Working toilets', s.f_toiw);
+    r('Computers', s.f_comp); r('Working computers', s.f_compw); r('Core textbooks', s.f_book);
+    r('Schools with safe water', T.yes.f_water); r('Schools with electricity', T.yes.f_elec); r('Schools with a library', T.yes.f_lib);
+    return R;
+  }
+  /* the columns: regions and the Unit; or the districts of a region and the region; or one district */
+  function totalCols(c) {
+    function byDist(list) {
+      var ks = [], seen = {};
+      list.forEach(function (r) { var k = norm(r.d.district); if (!seen[k]) { seen[k] = 1; ks.push(k); } });
+      ks.sort(function (a, b) { return String(c.dists[a] || a) < String(c.dists[b] || b) ? -1 : 1; });
+      return ks.map(function (k) { var l = list.filter(function (r) { return norm(r.d.district) === k; }); return { name: l[0].d.district || 'No district', list: l }; });
+    }
+    if (flt.dist) return [{ name: c.dists[flt.dist], list: c.list }];
+    if (flt.reg) return byDist(c.inScope).concat([{ name: c.regs[flt.reg] + ' Region total', list: c.inScope, total: 1 }]);
+    var cols = c.rorder.map(function (k) { return { name: c.regs[k], list: c.inCol.filter(function (r) { return norm(r.d.region) === k; }) }; }).filter(function (x) { return x.list.length; });
+    var none = c.inCol.filter(function (r) { return !norm(r.d.region); });
+    if (none.length) cols.push({ name: 'No region given', list: none });
+    return cols.concat([{ name: 'Unit total', list: c.inCol, total: 1 }]);
+  }
+  function totalsCard(c) {
+    var cols = totalCols(c), rows = totalRows(compute(c.inCol)), vals = cols.map(function (x) { return totalRows(compute(x.list)); });
+    var x = '<div class="card" id="ofTotals"><h2>Totals' + (flt.reg || flt.dist ? where(c) : ': all regions and the whole Unit') + '</h2><p class="note">Added up from the data every school sent. ' +
+      (flt.dist ? '' : flt.reg ? 'One column for each district in the region, then the region total.' : 'One column for each region, then the total for all schools in the Unit. Choose a region above to see its districts.') + '</p>';
+    x += '<div class="wrap"><table class="totals"><tr><th>Item</th>' + cols.map(function (k) { return '<th class="r">' + h(k.name) + '</th>'; }).join('') + '</tr>';
+    rows.forEach(function (r, i) {
+      if (r.length === 1) { x += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + h(r[0]) + '</td></tr>'; return; }
+      x += '<tr><td>' + h(r[0]) + '</td>' + vals.map(function (v, j) { return '<td class="r' + (cols[j].total ? ' tt' : '') + '">' + fmt(v[i][1]) + '</td>'; }).join('') + '</tr>';
+    });
+    return x + '</table></div></div>';
+  }
+  function totalsXlsx() {
+    var c = current(), sheets = [];
+    function sheet(name, title, cols) {
+      var labels = totalRows(compute([])), vals = cols.map(function (x) { return totalRows(compute(x.list)); }), rows = [];
+      rows.push([['Catholic Education Unit – ' + title, 1]]); rows.push([['Collection: ' + c.cols[flt.col].name]]); rows.push([]);
+      rows.push([['Item', 1]].concat(cols.map(function (x) { return [x.name, 1]; })));
+      labels.forEach(function (r, i) { rows.push(r.length === 1 ? [[r[0], 1]] : [[r[0]]].concat(vals.map(function (v) { return [v[i][1]]; }))); });
+      sheets.push({ name: name, rows: rows, widths: [44].concat(cols.map(function () { return 16; })) });
+    }
+    var save = { reg: flt.reg, dist: flt.dist };
+    flt.reg = ''; flt.dist = ''; var all = current();
+    sheet('Unit totals', 'totals by region and for the whole Unit', totalCols(all));
+    all.rorder.forEach(function (k) {
+      if (!all.inCol.some(function (r) { return norm(r.d.region) === k; })) return;
+      flt.reg = k; var cc = current();
+      sheet(all.regs[k], all.regs[k] + ' Region: totals by district', totalCols(cc));
+    });
+    flt.reg = save.reg; flt.dist = save.dist;
+    download('CEU_' + fileSafe(c.cols[flt.col].name) + '_totals.xlsx', xlsxBook(sheets), XLSX_TYPE);
+  }
   var flt = { col: null, reg: '', dist: '', sch: '' };
   function where(c) { return (flt.reg && c.regs[flt.reg] ? ' · ' + h(c.regs[flt.reg]) + ' Region' : '') + (flt.dist && c.dists[flt.dist] ? ' · ' + h(c.dists[flt.dist]) : ''); }
   function current() {
@@ -1227,7 +1424,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     x += '<div class="two"><label class="f">Region<select id="ofReg"><option value="">All regions</option>' + c.rorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.reg ? ' selected' : '') + '>' + h(c.regs[k]) + '</option>'; }).join('') + '</select></label>';
     x += '<label class="f">District<select id="ofDist"><option value="">All districts' + (flt.reg ? ' in this region' : '') + '</option>' + c.dorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.dist ? ' selected' : '') + '>' + h(c.dists[k]) + '</option>'; }).join('') + '</select></label></div></div>';
     x += '<label class="f">Schools that have sent (' + c.list.length + ')<select id="ofSch"><option value="">All schools – see the statistics</option>' + c.list.map(function (r) { return '<option value="' + h(r.id) + '"' + (r.id === flt.sch ? ' selected' : '') + '>' + h(r.d.name) + ' – ' + h(r.d.district) + '</option>'; }).join('') + '</select></label>';
-    x += '<button class="btn sm" onclick="CEU.csvAll()">⬇ All schools (Excel)</button><button class="btn sm" onclick="CEU.csvSummary()">⬇ Summary by region and district (Excel)</button><button class="btn sm alt" onclick="window.print()">🖨 Print / PDF</button></div>';
+    x += '<button class="btn sm" onclick="CEU.csvAll()">⬇ All schools (Excel)</button><button class="btn sm" onclick="CEU.totalsXlsx()">⬇ Totals (Excel)</button><button class="btn sm" onclick="CEU.csvSummary()">⬇ Summary by region and district (Excel)</button><button class="btn sm alt" onclick="window.print()">🖨 Print / PDF</button></div>';
     if (one) { body.innerHTML = x + schoolSheet(one); wireOffice(body); return; }
     x = pendingCard() + x + statusCard(c);
     x += '<div class="card"><h2>' + h(c.cols[flt.col].name) + (flt.reg || flt.dist ? where(c) : ' · all regions') + '</h2><div class="tiles" id="ofTiles">';
@@ -1235,6 +1432,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     x += tile(T.ptr == null ? '–' : fmt(T.ptr, 1), 'pupils per teacher') + tile(pct(T.trained, T.teach), 'teachers trained') + tile(T.gpi == null ? '–' : fmt(T.gpi, 2), 'gender parity (girls ÷ boys)');
     x += tile(ratio(T.p, s.f_cls), 'pupils per classroom') + tile(T.passRate == null ? '–' : pct(T.passAll, T.satAll), 'exam pass rate (aggregate 6–30)');
     x += '</div></div>';
+    x += totalsCard(c);
     /* pupils */
     var rows = [], ch = [];
     LEVELS.forEach(function (l) {
@@ -1380,7 +1578,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   }
   $('ofFiles').addEventListener('change', function () { readFiles(this.files); this.value = ''; });
   window.CEU = { go: go, finish: finish, edit: edit, newForm: newForm, csvAll: csvAll, csvSummary: csvSummary, backup: backup, clearAll: clearAll,
-    lock: lock, logout: logout, csvList: csvList, sha256: sha256, regs: regs, unscramble: unscramble,
+    lock: lock, logout: logout, totalsXlsx: totalsXlsx, csvList: csvList, sha256: sha256, regs: regs, unscramble: unscramble,
     addOne: addOne, addMany: addMany, saveExpected: saveExpected, clearList: clearList, csvMissing: csvMissing, pick: pick, ours: ours,
     compute: compute, validate: validate, addRecords: addRecords, sumOf: sumOf, xlsxOf: xlsxOf, readXlsx: readXlsx, recs: recs };
   /* on the web address: work offline after the first visit, and suggest adding it to the Home Screen */
