@@ -24,6 +24,12 @@ header button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(
 main{max-width:920px;margin:0 auto;padding:12px 12px 120px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin:0 0 12px}
 .card h2{margin:0 0 6px;font-size:1.05rem;color:var(--pri)}
+.card h2.foldable{cursor:pointer;user-select:none}
+.card.folded > *:not(h2){display:none!important}
+.card.folded > h2{margin:0}
+.arrow{display:inline-block;width:1.1em;color:var(--pri)}
+table.totals tr.grp{cursor:pointer}
+@media print{.card.folded > *:not(h2){display:block!important}table.totals tr.hide{display:table-row!important}}
 .card h3{margin:14px 0 6px;font-size:.98rem}
 .note{color:var(--mute);font-size:.88rem;margin:2px 0 10px}
 label.f{display:block;margin:0 0 10px;font-size:.9rem;color:var(--mute)}
@@ -1295,7 +1301,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
 
   /* one school's full sheet */
   function schoolSheet(r) {
-    var d = r.d, t = totals(d), w = validate(d).warnings, x = '<div class="card" id="ofSchool">';
+    var d = r.d, t = totals(d), w = validate(d).warnings, x = '<div class="card nofold" id="ofSchool">';
     x += '<button class="btn sm alt noprint" onclick="CEU.pick(\'\')">⬅ Back to all schools</button>';
     x += '<h2 style="margin-top:8px">' + h(d.name) + '</h2><p class="note">' + [d.region && d.region + ' Region', d.district, d.circuit && 'Circuit: ' + d.circuit, d.parish && 'Parish: ' + d.parish, d.emis && 'EMIS: ' + d.emis].filter(Boolean).map(h).join(' · ') + '</p>';
     x += tbl(['', ''], [['Head teacher', h(d.head || '–') + (d.phone ? ' · ' + h(d.phone) : '')], ['Filled in by', h(d.filledBy || '–')], ['Sent', h(r.savedAt.slice(0, 16).replace('T', ' '))],
@@ -1366,10 +1372,12 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var cols = totalCols(c), rows = totalRows(compute(c.inCol)), vals = cols.map(function (x) { return totalRows(compute(x.list)); });
     var x = '<div class="card" id="ofTotals"><h2>Totals' + (flt.reg || flt.dist ? where(c) : ': all regions and the whole Unit') + '</h2><p class="note">Added up from the data every school sent. ' +
       (flt.dist ? '' : flt.reg ? 'One column for each district in the region, then the region total.' : 'One column for each region, then the total for all schools in the Unit. Choose a region above to see its districts.') + '</p>';
+    x += '<button class="btn sm alt noprint" data-totall="open">Unfold all</button><button class="btn sm alt noprint" data-totall="fold">Fold all</button>';
     x += '<div class="wrap"><table class="totals"><tr><th>Item</th>' + cols.map(function (k) { return '<th class="r">' + h(k.name) + '</th>'; }).join('') + '</tr>';
+    var gi = -1, shut = false;
     rows.forEach(function (r, i) {
-      if (r.length === 1) { x += '<tr class="grp"><td colspan="' + (cols.length + 1) + '">' + h(r[0]) + '</td></tr>'; return; }
-      x += '<tr><td>' + h(r[0]) + '</td>' + vals.map(function (v, j) { return '<td class="r' + (cols[j].total ? ' tt' : '') + '">' + fmt(v[i][1]) + '</td>'; }).join('') + '</tr>';
+      if (r.length === 1) { gi++; shut = foldOf('tot:' + r[0], true); x += '<tr class="grp" data-grp="' + gi + '" data-key="' + h('tot:' + r[0]) + '"><td colspan="' + (cols.length + 1) + '"><span class="arrow">' + (shut ? '▸' : '▾') + '</span> ' + h(r[0]) + '</td></tr>'; return; }
+      x += '<tr data-g="' + gi + '"' + (shut ? ' class="hide"' : '') + '><td>' + h(r[0]) + '</td>' + vals.map(function (v, j) { return '<td class="r' + (cols[j].total ? ' tt' : '') + '">' + fmt(v[i][1]) + '</td>'; }).join('') + '</tr>';
     });
     return x + '</table></div></div>';
   }
@@ -1402,6 +1410,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     if (!flt.col || !cols[flt.col]) flt.col = order[0] || null;
     var inCol = all.filter(function (r) { return norm(r.d.collection) === flt.col; }), lst = ours().map(function (o) { return { d: o }; });
     var regs = {}, rorder = [];
+    REGIONS.forEach(function (g) { regs[norm(g)] = g; rorder.push(norm(g)); });
     inCol.concat(lst).forEach(function (r) { var k = norm(r.d.region); if (k && !regs[k]) { regs[k] = r.d.region; rorder.push(k); } });
     rorder.sort(function (a, b) { return regs[a] < regs[b] ? -1 : 1; });
     if (flt.reg && !regs[flt.reg]) flt.reg = '';
@@ -1420,7 +1429,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     var T = compute(c.list), s = T.s, x = '';
     var one = flt.sch ? c.list.filter(function (r) { return r.id === flt.sch; })[0] : null;
     if (!one) flt.sch = '';
-    x += '<div class="card noprint"><div class="two"><label class="f">Collection<select id="ofCol">' + c.order.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.col ? ' selected' : '') + '>' + h(c.cols[k].name) + '</option>'; }).join('') + '</select></label>';
+    x += '<div class="card noprint nofold"><div class="two"><label class="f">Collection<select id="ofCol">' + c.order.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.col ? ' selected' : '') + '>' + h(c.cols[k].name) + '</option>'; }).join('') + '</select></label>';
     x += '<div class="two"><label class="f">Region<select id="ofReg"><option value="">All regions</option>' + c.rorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.reg ? ' selected' : '') + '>' + h(c.regs[k]) + '</option>'; }).join('') + '</select></label>';
     x += '<label class="f">District<select id="ofDist"><option value="">All districts' + (flt.reg ? ' in this region' : '') + '</option>' + c.dorder.map(function (k) { return '<option value="' + h(k) + '"' + (k === flt.dist ? ' selected' : '') + '>' + h(c.dists[k]) + '</option>'; }).join('') + '</select></label></div></div>';
     x += '<label class="f">Schools that have sent (' + c.list.length + ')<select id="ofSch"><option value="">All schools – see the statistics</option>' + c.list.map(function (r) { return '<option value="' + h(r.id) + '"' + (r.id === flt.sch ? ' selected' : '') + '>' + h(r.d.name) + ' – ' + h(r.d.district) + '</option>'; }).join('') + '</select></label>';
@@ -1481,8 +1490,9 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     /* regions, and the districts within the region */
     function cmpRow(name, D) { return [name, fmt(D.n), fmt(D.p), D.gpi == null ? '–' : fmt(D.gpi, 2), fmt(D.teach), D.ptr == null ? '–' : fmt(D.ptr, 1), pct(D.trained, D.teach), D.passRate == null ? '–' : pct(D.passAll, D.satAll)]; }
     var CMP = ['Schools', 'Pupils', 'Girls ÷ boys', 'Teachers', 'Pupils per teacher', 'Trained', 'Pass rate'];
-    if (!flt.reg && !flt.dist && c.rorder.length > 1) {
-      x += '<div class="card" id="ofRegions"><h2>Regions compared</h2>' + tbl(['Region'].concat(CMP), c.rorder.map(function (k) {
+    var regsWithData = c.rorder.filter(function (k) { return c.inCol.some(function (r) { return norm(r.d.region) === k; }); });
+    if (!flt.reg && !flt.dist && regsWithData.length > 1) {
+      x += '<div class="card" id="ofRegions"><h2>Regions compared</h2>' + tbl(['Region'].concat(CMP), regsWithData.map(function (k) {
         return cmpRow(h(c.regs[k]), compute(c.inCol.filter(function (r) { return norm(r.d.region) === k; })));
       })) + '</div>';
     }
@@ -1508,7 +1518,33 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     body.innerHTML = x;
     wireOffice(body);
   }
+  /* folding: each titled part of the statistics, and each group of the totals, can be folded and unfolded */
+  var FOLD = {};
+  function foldOf(key, dflt) { return FOLD.hasOwnProperty(key) ? FOLD[key] : dflt; }
+  function wireFolds(body) {
+    var heads = body.querySelectorAll('.card > h2'), i;
+    for (i = 0; i < heads.length; i++) (function (hd) {
+      var card = hd.parentNode, key = 'card:' + (card.id || hd.textContent.replace(/\(\d+\)/g, '').trim());
+      if (card.className.indexOf('nofold') >= 0) return;
+      hd.className = 'foldable'; hd.setAttribute('role', 'button');
+      hd.insertAdjacentHTML('afterbegin', '<span class="arrow noprint">▾</span> ');
+      function set(shut) { FOLD[key] = shut; card.className = card.className.replace(/ ?folded/g, '') + (shut ? ' folded' : ''); hd.firstChild.textContent = shut ? '▸' : '▾'; }
+      set(foldOf(key, false));
+      hd.onclick = function () { set(!foldOf(key, false)); };
+    })(heads[i]);
+    var grps = body.querySelectorAll('tr.grp[data-grp]');
+    function setGrp(tr, shut) {
+      FOLD[tr.getAttribute('data-key')] = shut;
+      tr.querySelector('.arrow').textContent = shut ? '▸' : '▾';
+      var rs = tr.parentNode.querySelectorAll('tr[data-g="' + tr.getAttribute('data-grp') + '"]');
+      for (var j = 0; j < rs.length; j++) rs[j].className = shut ? 'hide' : '';
+    }
+    for (i = 0; i < grps.length; i++) grps[i].onclick = function () { setGrp(this, !foldOf(this.getAttribute('data-key'), true)); };
+    var alls = body.querySelectorAll('[data-totall]');
+    for (i = 0; i < alls.length; i++) alls[i].onclick = function () { var shut = this.getAttribute('data-totall') === 'fold'; for (var j = 0; j < grps.length; j++) setGrp(grps[j], shut); };
+  }
   function wireOffice(body) {
+    wireFolds(body);
     var i, el;
     if ((el = $('ofCol'))) el.onchange = function () { flt.col = this.value; flt.reg = ''; flt.dist = ''; flt.sch = ''; renderOffice(); };
     if ((el = $('ofReg'))) el.onchange = function () { flt.reg = this.value; flt.dist = ''; flt.sch = ''; renderOffice(); };
