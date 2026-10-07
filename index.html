@@ -80,7 +80,8 @@ svg{max-width:100%;height:auto;display:block}
 .big-n{font-size:1.25rem}
 details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
 .home-ic{font-size:2rem;line-height:1}
-@media print{header button,.bar,.noprint,.btn{display:none!important}body{background:#fff}.card{break-inside:avoid;border-color:#bbb}main{padding:0}}
+#printSheet{display:none}
+@media print{body.psheet main,body.psheet header{display:none!important}body.psheet #printSheet{display:block}header button,.bar,.noprint,.btn{display:none!important}body{background:#fff}.card{break-inside:avoid;border-color:#bbb}main{padding:0}}
 </style>
 </head>
 <body>
@@ -122,13 +123,9 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     <div id="ofLock" class="hide"></div>
     <div id="ofMain">
     <div class="card noprint">
-      <h2>Add schools' data</h2>
-      <p class="note">Choose the files the schools sent (you can choose many at once), or paste the text they sent by WhatsApp.</p>
-      <label class="btn">📂 Choose files<input id="ofFiles" type="file" multiple accept=".json,.txt,application/json,text/plain" class="hide"></label>
-      <details style="margin-top:6px"><summary>Paste text sent by WhatsApp</summary>
-        <textarea id="ofPaste" placeholder="Paste here. It starts with CEU1:"></textarea>
-        <button class="btn" onclick="CEU.addPasted()">Add</button>
-      </details>
+      <h2>Upload schools' files</h2>
+      <p class="note">Save the Excel files the schools sent you (by WhatsApp or email), then choose them here. You can choose many at once. The statistics update by themselves.</p>
+      <label class="btn">📂 Upload Excel files<input id="ofFiles" type="file" multiple accept=".xlsx,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/json" class="hide"></label>
       <div id="ofMsg"></div>
     </div>
     <div id="ourCard" class="card noprint"></div>
@@ -136,6 +133,7 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     </div>
   </section>
 </main>
+<div id="printSheet"></div>
 <div class="bar hide" id="schoolBar"><div class="in"><small id="draftState">Kept on this device</small><button class="btn ok" onclick="CEU.finish(false)">Check and finish ✔</button></div></div>
 
 <script>
@@ -198,25 +196,14 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   function fnv(s) { var x = 0x811c9dc5; for (var i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = (x + ((x << 1) + (x << 4) + (x << 7) + (x << 8) + (x << 24))) >>> 0; } return ('0000000' + x.toString(16)).slice(-8); }
   function stable(d) { return JSON.stringify(Object.keys(d).sort().map(function (k) { return [k, d[k]]; })); }
   function sumOf(r) { return fnv(r.id + '|' + r.savedAt + '|' + stable(r.d)); }
-  function b64(s) { return btoa(unescape(encodeURIComponent(s))); }
-  function unb64(s) { return decodeURIComponent(escape(atob(s))); }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function fileSafe(s) { return String(s || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'school'; }
   function download(name, text, type) {
-    var blob = new Blob([text], { type: type });
+    var blob = text instanceof Blob ? text : new Blob([text], { type: type });
     if (window.navigator.msSaveBlob) { window.navigator.msSaveBlob(blob, name); return; }
     var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.parentNode.removeChild(a); }, 3000);
-  }
-  function copyText(t, done) {
-    function fallback() {
-      var ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.top = '-200px';
-      document.body.appendChild(ta); ta.select(); var ok = false;
-      try { ok = document.execCommand('copy'); } catch (e) {}
-      document.body.removeChild(ta); done(ok);
-    }
-    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(function () { done(true); }, fallback); else fallback();
   }
 
 
@@ -602,27 +589,173 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     draft.done = rec; sset(draftKey(), draft);
     showSend(rec);
   }
-  function codeOf(rec) { return 'CEU1:' + b64(JSON.stringify(rec)); }
-  function fileOf(rec) { return 'CEU_' + fileSafe(rec.d.collection) + '_' + fileSafe(rec.d.name) + '_' + rec.savedAt.slice(0, 10) + '.json'; }
+
+  /* ---------- Excel files (.xlsx) made and read on the device ---------- */
+  var XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  function utf8(str) { if (window.TextEncoder) return new TextEncoder().encode(str); var b = unescape(encodeURIComponent(str)), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  function fromUtf8(a) { if (window.TextDecoder) return new TextDecoder('utf-8').decode(a); var b = ''; for (var i = 0; i < a.length; i++) b += String.fromCharCode(a[i]); return decodeURIComponent(escape(b)); }
+  var CRC = null;
+  function crc32(a) {
+    if (!CRC) { CRC = []; for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; CRC[n] = c >>> 0; } }
+    var x = 0xFFFFFFFF; for (var i = 0; i < a.length; i++) x = CRC[(x ^ a[i]) & 255] ^ (x >>> 8); return (x ^ 0xFFFFFFFF) >>> 0;
+  }
+  /* a zip with the files stored as they are */
+  function zip(files) {
+    var parts = [], cd = [], off = 0, d = new Date();
+    var tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+    function hdr(len) { var b = new DataView(new ArrayBuffer(len)); return b; }
+    files.forEach(function (f) {
+      var name = utf8(f.name), data = utf8(f.text), crc = crc32(data), h = hdr(30);
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true); h.setUint16(10, tm, true); h.setUint16(12, dt, true);
+      h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      parts.push(new Uint8Array(h.buffer), name, data);
+      var c = hdr(46);
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true); c.setUint16(12, tm, true); c.setUint16(14, dt, true);
+      c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      cd.push(new Uint8Array(c.buffer), name);
+      off += 30 + name.length + data.length;
+    });
+    var size = 0; cd.forEach(function (x) { size += x.length; });
+    var e = hdr(22); e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, size, true); e.setUint32(16, off, true);
+    return new Blob(parts.concat(cd, [new Uint8Array(e.buffer)]), { type: XLSX_TYPE });
+  }
+  /* reads a zip, also one saved again by Excel (packed files need a browser that can unpack them) */
+  function unzip(buf, done) {
+    var u = new Uint8Array(buf), v = new DataView(buf), i, out = {}, left = 0, failed = false;
+    for (i = u.length - 22; i >= 0 && v.getUint32(i, true) !== 0x06054b50; i--);
+    if (i < 0) return done(null);
+    var n = v.getUint16(i + 10, true), p = v.getUint32(i + 16, true), list = [];
+    for (var k = 0; k < n; k++) {
+      if (v.getUint32(p, true) !== 0x02014b50) return done(null);
+      var method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), nl = v.getUint16(p + 28, true), el = v.getUint16(p + 30, true), cl = v.getUint16(p + 32, true), lo = v.getUint32(p + 42, true);
+      var name = fromUtf8(u.subarray(p + 46, p + 46 + nl)), start = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true);
+      list.push({ name: name, method: method, data: u.subarray(start, start + csize) });
+      p += 46 + nl + el + cl;
+    }
+    left = list.length;
+    if (!left) return done(out);
+    list.forEach(function (f) {
+      function got(bytes) { out[f.name] = bytes; if (!--left && !failed) done(out); }
+      if (f.method === 0) got(f.data);
+      else if (f.method === 8 && window.DecompressionStream && window.Response) {
+        new Response(new Blob([f.data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer().then(function (b) { got(new Uint8Array(b)); }, function () { if (!failed) { failed = true; done(null); } });
+      } else if (!failed) { failed = true; done(null); }
+    });
+  }
+  function xesc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function colName(i) { return 'ABC'.charAt(i); }
+  function xlsxOf(rec) {
+    var d = rec.d, t = totals(d), rows = [];
+    rows.push([['Catholic Education Unit – School data', 1]]);
+    rows.push([['School', 1], [d.name]]); rows.push([['Collection', 1], [d.collection]]); rows.push([['Saved on', 1], [rec.savedAt.slice(0, 16).replace('T', ' ')]]);
+    rows.push([['Total pupils', 1], [t.p]]); rows.push([['Total teachers', 1], [t.teach]]);
+    rows.push([]);
+    rows.push([['Item', 1], ['Value', 1], ['Code', 1]]);
+    ALLKEYS.forEach(function (k) { if (d[k] === undefined) return; rows.push([[LABEL[k] || k], [d[k] === true ? 'Yes' : d[k]], [k]]); });
+    rows.push([]);
+    rows.push([['Made with the CEU school data tool. Do not change this file: the Unit office will refuse a changed file.']]);
+    var sd = rows.map(function (r, ri) {
+      return '<row r="' + (ri + 1) + '">' + r.map(function (c, ci) {
+        var ref = colName(ci) + (ri + 1), st = c[1] ? ' s="1"' : '';
+        return typeof c[0] === 'number' ? '<c r="' + ref + '"' + st + '><v>' + c[0] + '</v></c>' : '<c r="' + ref + '" t="inlineStr"' + st + '><is><t xml:space="preserve">' + xesc(c[0]) + '</t></is></c>';
+      }).join('') + '</row>';
+    }).join('');
+    var NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main', R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships', P = 'http://schemas.openxmlformats.org/package/2006/relationships';
+    var head = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    var ws = 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml';
+    return zip([
+      { name: '[Content_Types].xml', text: head + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>' +
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="' + ws + '"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="' + ws + '"/>' +
+        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>' },
+      { name: '_rels/.rels', text: head + '<Relationships xmlns="' + P + '"><Relationship Id="rId1" Type="' + R + '/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+      { name: 'xl/workbook.xml', text: head + '<workbook xmlns="' + NS + '" xmlns:r="' + R + '"><sheets><sheet name="School data" sheetId="1" r:id="rId1"/><sheet name="ceu" sheetId="2" state="hidden" r:id="rId2"/></sheets></workbook>' },
+      { name: 'xl/_rels/workbook.xml.rels', text: head + '<Relationships xmlns="' + P + '"><Relationship Id="rId1" Type="' + R + '/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="' + R + '/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="' + R + '/styles" Target="styles.xml"/></Relationships>' },
+      { name: 'xl/styles.xml', text: head + '<styleSheet xmlns="' + NS + '"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>' +
+        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>' },
+      { name: 'xl/worksheets/sheet1.xml', text: head + '<worksheet xmlns="' + NS + '"><cols><col min="1" max="1" width="44" customWidth="1"/><col min="2" max="2" width="30" customWidth="1"/><col min="3" max="3" width="12" hidden="1" customWidth="1"/></cols><sheetData>' + sd + '</sheetData></worksheet>' },
+      { name: 'xl/worksheets/sheet2.xml', text: head + '<worksheet xmlns="' + NS + '"><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>' + xesc(JSON.stringify(rec)) + '</t></is></c></row></sheetData></worksheet>' }
+    ]);
+  }
+  function xlName(rec) { return 'CEU_' + fileSafe(rec.d.collection) + '_' + fileSafe(rec.d.name) + '.xlsx'; }
+  /* gives back the school's form, or null if it is not one; a form whose visible numbers were changed comes back marked */
+  function readXlsx(buf, done) {
+    unzip(buf, function (files) {
+      try {
+        if (!files) return done(null);
+        var dp = new DOMParser();
+        function xml(name) { var b = files[name]; return b ? dp.parseFromString(fromUtf8(b), 'application/xml') : null; }
+        function els(node, tag) { return node.getElementsByTagNameNS('*', tag); }
+        function txt(node) { var ts = els(node, 't'), o = ''; for (var i = 0; i < ts.length; i++) o += ts[i].textContent; return o; }
+        var shared = [], ss = xml('xl/sharedStrings.xml');
+        if (ss) { var si = els(ss, 'si'); for (var i = 0; i < si.length; i++) shared.push(txt(si[i])); }
+        var wb = xml('xl/workbook.xml'), rels = xml('xl/_rels/workbook.xml.rels'), target = {};
+        if (!wb || !rels) return done(null);
+        var rs = els(rels, 'Relationship');
+        for (i = 0; i < rs.length; i++) target[rs[i].getAttribute('Id')] = rs[i].getAttribute('Target');
+        var sheets = {}, sh = els(wb, 'sheet');
+        for (i = 0; i < sh.length; i++) {
+          var rid = sh[i].getAttribute('r:id') || sh[i].getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id');
+          var tg = String(target[rid] || '').replace(/^\/?xl\//, '').replace(/^\//, '');
+          sheets[sh[i].getAttribute('name')] = xml('xl/' + tg);
+        }
+        function cells(doc) {
+          var out = {}, cs = els(doc, 'c');
+          for (var j = 0; j < cs.length; j++) {
+            var c = cs[j], t = c.getAttribute('t'), vv = els(c, 'v')[0], val;
+            if (t === 'inlineStr') val = txt(c); else if (t === 's') val = shared[+(vv ? vv.textContent : -1)]; else val = vv ? vv.textContent : '';
+            out[c.getAttribute('r')] = val;
+          }
+          return out;
+        }
+        if (!sheets.ceu || !sheets['School data']) return done(null);
+        var rec = JSON.parse(cells(sheets.ceu).A1 || 'null');
+        if (!rec || !rec.d) return done(null);
+        /* every visible value must still be what the school saved */
+        var vis = cells(sheets['School data']), seen = {}, same = true;
+        for (var ref in vis) {
+          var m = /^C(\d+)$/.exec(ref);
+          if (!m || !LABEL[vis[ref]]) continue;
+          var k = vis[ref], shown = vis['B' + m[1]], want = rec.d[k] === true ? 'Yes' : rec.d[k];
+          seen[k] = 1;
+          if (typeof want === 'number' ? Math.abs(Number(shown) - want) > 1e-9 || shown === '' || shown == null : String(shown == null ? '' : shown) !== String(want == null ? '' : want)) same = false;
+        }
+        ALLKEYS.forEach(function (k) { if (rec.d[k] !== undefined && !seen[k]) same = false; });
+        if (!same) rec.sum = 'changed';
+        done(rec);
+      } catch (e) { done(null); }
+    });
+  }
+  function printSchool(rec) {
+    $('printSheet').innerHTML = schoolSheet(rec);
+    document.body.className = 'psheet';
+    var undo = function () { document.body.className = ''; window.removeEventListener('afterprint', undo); };
+    window.addEventListener('afterprint', undo);
+    window.print();
+    setTimeout(undo, 1500);
+  }
   function showSend(rec) {
-    var t = totals(rec.d), canShare = false, file = null;
-    try { file = new File([JSON.stringify(rec)], fileOf(rec), { type: 'application/json' }); canShare = !!(navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
+    var t = totals(rec.d), file = null, canShare = false, blob = xlsxOf(rec), name = xlName(rec);
+    try { file = new File([blob], name, { type: XLSX_TYPE }); canShare = !!(navigator.share && navigator.canShare && navigator.canShare({ files: [file] })); } catch (e) {}
     var s = '<div class="card"><h2>✔ Finished. Now send it to the Unit office.</h2>';
     s += '<p><b>' + h(rec.d.name) + '</b><br>' + h(rec.d.collection) + '<br>' + fmt(t.p) + ' pupils · ' + fmt(t.teach) + ' teachers</p>';
-    s += '<p class="note">Choose one way. Sending needs a signal only for the moment you send.</p>';
-    if (canShare) s += '<button class="btn big" id="sdShare">📤 Share the file (WhatsApp, email…)</button>';
-    s += '<button class="btn big' + (canShare ? ' alt' : '') + '" id="sdFile">💾 Save as a file</button><p class="note">Then send the file by WhatsApp, email or flash drive. It is in your Downloads.</p>';
-    s += '<a class="btn big alt" id="sdWa" target="_blank" rel="noopener" href="https://wa.me/?text=' + encodeURIComponent('CEU school data: ' + rec.d.name + ' – ' + rec.d.collection + '\n' + codeOf(rec)) + '">💬 Send as a WhatsApp message</a>';
-    s += '<button class="btn big alt" id="sdCopy">📋 Copy as text</button><div id="sdMsg"></div>';
-    s += '<details><summary>Show the text</summary><textarea class="code" readonly id="sdCode">' + h(codeOf(rec)) + '</textarea></details>';
+    s += '<button class="btn big" id="sdSend">📤 Send to the Unit office (Excel)</button>';
+    s += '<p class="note">' + (canShare ? 'Your phone\'s share list opens: choose <b>WhatsApp</b>, then the Unit office, and send.' : 'The Excel file is saved in your Downloads. Then send it to the Unit office by WhatsApp or email.') + '</p>';
+    s += '<div id="sdMsg"></div>';
+    s += '<button class="btn alt" id="sdSave">💾 Save the Excel file on this device</button><button class="btn alt" id="sdPdf">🖨 Print or save as PDF</button>';
     s += '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">';
     s += '<button class="btn alt" id="sdOffice">Add to the statistics on this device</button><button class="btn alt" onclick="CEU.edit()">Change something</button><button class="btn bad" onclick="CEU.newForm()">Start a new form</button></div>';
     $('sendBox').innerHTML = s; $('sendBox').className = ''; $('formArea').className = 'hide'; $('schoolBar').className = 'bar hide';
     window.scrollTo(0, 0);
-    if (canShare) $('sdShare').onclick = function () { navigator.share({ files: [file], title: 'CEU school data', text: rec.d.name }).catch(function () {}); };
-    $('sdFile').onclick = function () { download(fileOf(rec), JSON.stringify(rec), 'application/json'); $('sdMsg').innerHTML = '<div class="msg ok">Saved: ' + h(fileOf(rec)) + '</div>'; };
-    $('sdCopy').onclick = function () { copyText(codeOf(rec), function (ok) { $('sdMsg').innerHTML = ok ? '<div class="msg ok">Copied. Paste it in WhatsApp or an email to the Unit office.</div>' : '<div class="msg warn">Could not copy. Open "Show the text", hold on it and copy.</div>'; }); };
-    $('sdOffice').onclick = function () { var r = addRecords([rec]); $('sdMsg').innerHTML = '<div class="msg ok">' + h(r.text) + ' Open "Unit office" on the Home page to see the statistics.</div>'; };
+    function saved() { download(name, blob, XLSX_TYPE); $('sdMsg').innerHTML = '<div class="msg ok">✔ Excel file saved in your Downloads: <b>' + h(name) + '</b>. Send it to the Unit office by WhatsApp or email.</div>'; }
+    $('sdSend').onclick = function () {
+      if (!canShare) return saved();
+      navigator.share({ files: [file], title: 'CEU school data', text: rec.d.name + ' – ' + rec.d.collection }).then(function () {
+        $('sdMsg').innerHTML = '<div class="msg ok">✔ Data sent. Check in WhatsApp that the file shows as sent (✓). If it shows a clock 🕒, it goes when you have signal.</div>';
+      }, function (e) { if (!e || e.name !== 'AbortError') saved(); });
+    };
+    $('sdSave').onclick = saved;
+    $('sdPdf').onclick = function () { printSchool(rec); };
+    $('sdOffice').onclick = function () { var r = addRecords([rec]); $('sdMsg').innerHTML = '<div class="msg ' + (r.pending ? 'warn' : 'ok') + '">' + h(r.text) + ' Open "Unit office" on the Home page to see the statistics.</div>'; };
   }
   function openSchool() {
     draft = sget(draftKey());
@@ -671,60 +804,56 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
   /* trusted (true, or a list): forms from the office's own backup file. Otherwise a form is taken by itself only when the
      school name and phone match the list; the rest wait for the office to accept or refuse */
   function addRecords(list, trusted) {
-    var all = recs(), idx = {}, res = { added: 0, replaced: 0, older: 0, changed: 0, wrong: 0, same: 0, pending: 0 }, schools = ours(), pend = sget('ceu_pending') || [], listChanged = false;
+    var all = recs(), idx = {}, res = { added: 0, replaced: 0, older: 0, changed: 0, wrong: 0, same: 0, pending: 0 }, nm = { added: [], replaced: [], older: [], changed: [], same: [], pending: [] }, schools = ours(), pend = sget('ceu_pending') || [], listChanged = false;
     all.forEach(function (r, i) { idx[keyOf(r, schools)] = i; });
     list.forEach(function (r) {
       if (!r || r.app !== 'CEU-DATA' || !r.d || typeof r.d !== 'object' || !r.savedAt || !r.id) { res.wrong++; return; }
-      if (r.sum !== sumOf(r)) { res.changed++; return; }
+      if (r.sum !== sumOf(r)) { res.changed++; nm.changed.push(r.d.name); return; }
       if (trusted !== true && (!trusted || trusted.indexOf(r) < 0) && !approved(r, schools)) {
         var pk = pendKey(r), at = -1;
         pend.forEach(function (q, i) { if (pendKey(q) === pk) at = i; });
         if (at < 0) pend.push(r); else if (pend[at].savedAt < r.savedAt) pend[at] = r;
-        res.pending++; return;
+        res.pending++; nm.pending.push(r.d.name); return;
       }
       var o = matchOf(r, schools);
       if (o && r.d.rpw && !(o.rpwAt && o.rpwAt > r.savedAt)) { o.rpw = r.d.rpw; o.rpwAt = r.savedAt; listChanged = true; }
       var k = keyOf(r, schools);
-      if (idx[k] == null) { idx[k] = all.length; all.push(r); res.added++; }
-      else if (all[idx[k]].savedAt === r.savedAt && all[idx[k]].sum === r.sum) res.same++;
-      else if (all[idx[k]].savedAt < r.savedAt) { all[idx[k]] = r; res.replaced++; }
-      else res.older++;
+      if (idx[k] == null) { idx[k] = all.length; all.push(r); res.added++; nm.added.push(r.d.name); }
+      else if (all[idx[k]].savedAt === r.savedAt && all[idx[k]].sum === r.sum) { res.same++; nm.same.push(r.d.name); }
+      else if (all[idx[k]].savedAt < r.savedAt) { all[idx[k]] = r; res.replaced++; nm.replaced.push(r.d.name); }
+      else { res.older++; nm.older.push(r.d.name); }
     });
     sset('ceu_office', all); sset('ceu_pending', pend);
     if (listChanged) sset('ceu_schools', schools);
     var p = [];
-    if (res.added) p.push(res.added + ' school' + (res.added > 1 ? 's' : '') + ' added.');
-    if (res.replaced) p.push(res.replaced + ' replaced by a newer copy.');
-    if (res.same) p.push(res.same + ' already loaded.');
-    if (res.older) p.push(res.older + ' not used: a newer copy is already loaded.');
-    if (res.changed) p.push(res.changed + ' refused: the data was changed after the school saved it. Ask the school to send it again.');
-    if (res.wrong) p.push(res.wrong + ' refused: not CEU school data.');
-    if (res.pending) p.push(res.pending + ' waiting for you: the school name and phone do not match your list. See "New schools waiting" below.');
+    function few(a) { return a.length > 6 ? a.slice(0, 6).join(', ') + ' and ' + (a.length - 6) + ' more' : a.join(', '); }
+    if (res.added) p.push('✔ Received ' + res.added + ' school' + (res.added > 1 ? 's' : '') + ': ' + few(nm.added) + '.');
+    if (res.replaced) p.push('✔ Updated with a newer copy: ' + few(nm.replaced) + '.');
+    if (res.same) p.push('Already received before: ' + few(nm.same) + '.');
+    if (res.older) p.push('Not used, a newer copy is already here: ' + few(nm.older) + '.');
+    if (res.changed) p.push('Refused, the file was changed after the school saved it: ' + few(nm.changed) + '. Ask the school to send it again from the tool.');
+    if (res.wrong) p.push(res.wrong + ' file(s) refused: not a school Excel file from the CEU tool.');
+    if (res.pending) p.push('Waiting for you to accept (name or phone not on your list): ' + few(nm.pending) + '. See "New schools waiting" below.');
     res.text = p.join(' ') || 'Nothing found to add.';
     return res;
   }
-  function parseText(text) {
-    var out = [];
-    text = String(text || '').replace(/^﻿/, '');
-    try { var j = JSON.parse(text); return Object.prototype.toString.call(j) === '[object Array]' ? [{ app: 'CEU-BACKUP', recs: j }] : [j]; } catch (e) {}
-    var m = text.match(/CEU1:[A-Za-z0-9+\/=]+/g) || [];
-    m.forEach(function (c) { try { out.push(JSON.parse(unb64(c.slice(5)))); } catch (e) { out.push(null); } });
-    return out;
-  }
-  function addPasted() {
-    var r = importItems(parseText($('ofPaste').value));
-    if (r.added || r.replaced) $('ofPaste').value = '';
-    showMsg(r); renderOffice();
+  function parseBackup(text) {
+    var j = null;
+    try { j = JSON.parse(String(text || '').replace(/^﻿/, '')); } catch (e) {}
+    if (Object.prototype.toString.call(j) === '[object Array]') return { app: 'CEU-BACKUP', recs: j };
+    return j && j.app === 'CEU-BACKUP' ? j : null;
   }
   function showMsg(r) { $('ofMsg').innerHTML = '<div class="msg ' + (r.changed || r.wrong || r.pending ? 'warn' : 'ok') + '">' + h(r.text) + '</div>'; }
   function readFiles(files) {
     var list = [], left = files.length;
     if (!left) return;
+    $('ofMsg').innerHTML = '<div class="msg warn">Reading ' + left + ' file(s)…</div>';
+    function one(x) { list.push(x); if (!--left) { showMsg(importItems(list)); renderOffice(); } }
     Array.prototype.forEach.call(files, function (f) {
-      var fr = new FileReader();
-      fr.onload = function () { list = list.concat(parseText(fr.result)); if (!--left) { showMsg(importItems(list)); renderOffice(); } };
-      fr.onerror = function () { list.push(null); if (!--left) { showMsg(importItems(list)); renderOffice(); } };
-      fr.readAsText(f);
+      var fr = new FileReader(), isX = /\.xlsx$/i.test(f.name);
+      fr.onload = function () { if (isX) readXlsx(fr.result, one); else one(parseBackup(fr.result)); };
+      fr.onerror = function () { one(null); };
+      if (isX) fr.readAsArrayBuffer(f); else fr.readAsText(f);
     });
   }
 
@@ -1170,10 +1299,10 @@ details summary{cursor:pointer;color:var(--pri);font-weight:600;padding:6px 0}
     window.scrollTo(0, 0);
   }
   $('ofFiles').addEventListener('change', function () { readFiles(this.files); this.value = ''; });
-  window.CEU = { go: go, finish: finish, edit: edit, newForm: newForm, addPasted: addPasted, csvAll: csvAll, csvSummary: csvSummary, backup: backup, clearAll: clearAll,
+  window.CEU = { go: go, finish: finish, edit: edit, newForm: newForm, csvAll: csvAll, csvSummary: csvSummary, backup: backup, clearAll: clearAll,
     lock: lock, logout: logout, csvList: csvList, sha256: sha256, regs: regs, unscramble: unscramble,
     addOne: addOne, addMany: addMany, saveExpected: saveExpected, clearList: clearList, csvMissing: csvMissing, pick: pick, ours: ours,
-    compute: compute, validate: validate, addRecords: addRecords, parseText: parseText, sumOf: sumOf, codeOf: codeOf, recs: recs };
+    compute: compute, validate: validate, addRecords: addRecords, sumOf: sumOf, xlsxOf: xlsxOf, readXlsx: readXlsx, recs: recs };
   /* on the web address: work offline after the first visit, and suggest adding it to the Home Screen */
   if (/^https?:$/.test(location.protocol)) {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
